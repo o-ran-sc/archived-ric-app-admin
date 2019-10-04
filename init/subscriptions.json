@@ -1,0 +1,32 @@
+{
+  "subscribe_sgnb_request":{
+    "ranFunctionId":0,
+    "ricAction-ToBeSetup-List":{
+      "list": [
+       {
+        "ricActionType":0,
+        "ricActionID":1
+       }
+      ]
+    },
+    "ricEventTriggerDefinition":{
+       "interfaceMessageType":{
+ 	"procedureCode":27,
+        "messageType":0
+        },
+ 
+        "interfaceDirection":0,
+        "interfaceID":{
+             "globalGnbID":"NYC123",
+             "plmnIdentity":"123"
+         },
+         "interfaceProtoIE-List":[
+           {
+            "id": 10,
+            "test":0,
+            "value":"34,35"
+           }
+          ]
+    }
+  }
+}
