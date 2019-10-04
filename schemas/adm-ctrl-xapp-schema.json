@@ -1,0 +1,98 @@
+{
+  "name":"admission_control_xapp",
+  "owner":"att:app_paas",
+  "description":"Admission Control logic for dual connection",
+  "controls":[
+    {
+      "name":"admission_control_policy",
+      "description":"various parameters to control admission of dual connection",
+      "message_receives_rmr_type":"DC_ADMISSION_INTERVAL_CONTROL",
+      "message_receives_payload_schema":{
+        "$schema":"http://json-schema.org/draft-07/schema#",
+        "type":"object",
+        "properties":{
+          "enforce":{
+            "type":"boolean",
+            "default":true
+          },
+          "window_length":{
+            "type":"integer",
+            "default":1,
+            "minimum":1,
+            "maximum":60,
+            "description":"Sliding window length (in minutes)"
+          },
+	  "blocking_rate":{
+	     "type":"number",
+             "default":10,
+             "minimum":1,
+             "maximum":100,
+             "description":"% Connections to block"
+          },
+          "trigger_threshold":{
+             "type":"integer",
+             "default":10,
+             "minimum":1,
+             "description":"Minimum number of events in window to trigger blocking"
+          }
+        },
+
+        "required":["enforce", "blocking_rate", "trigger_threshold", "window_length"],
+	"additionalProperties":false
+      },
+      "message_sends_rmr_type":"DC_ADMISSION_INTERVAL_CONTROL_ACK",
+      "message_sends_payload_schema":{
+        "$schema":"http://json-schema.org/draft-07/schema#",
+        "type":"object",
+        "properties":{
+          "status":{
+            "type":"string",
+            "enum":[
+              "SUCCESS",
+              "FAIL"
+            ]
+          },
+          "message":{
+            "type":"string"
+          }
+        },
+	"required":["status"],
+	"additionalProperties":false
+      }
+    }
+  ],
+  "configuration":[
+    {
+      "name":"rnib-endpoint",
+      "type":"string",
+      "description":"rnib namespace",
+      "default_value":"127.0.0.1:6379"
+    },
+    {
+      "name":"spid",
+      "type":"NUMBER",
+      "description":"spid values for admitting dual connection",
+      "default_value":"34,35"
+    }
+  ],
+  "metrics":[
+    {
+      "name":"num_accepted_dc_reqs",
+      "type":"COUNTER",
+      "unit":"",
+      "description":"Number of accepted dc requests since the start of the xapp"
+    },
+    {
+      "name":"num_rejected_dc_reqs",
+      "type":"COUNTER",
+      "unit":"",
+      "description":"Number of rejected dc requests since the start of the xapp"
+    },
+    {
+      "name":"num_dc_reqs_per_min",
+      "type":"GUAGE",
+      "description":"Number of dc requests received by this xAPP per min",
+      "unit":"Number per min"
+    }
+  ]
+}
