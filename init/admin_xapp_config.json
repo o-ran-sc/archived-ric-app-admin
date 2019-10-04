@@ -1,0 +1,26 @@
+{
+    "service_ports":{
+	"xapp_port":4560,
+	"rmr_port":4561
+    },
+
+    "rmr":{
+       "protPort": "tcp:4560",
+       "maxSize": 2072,
+       "numWorkers": 1,
+       "txMessages": ["RIC_SUB_REQ", "RIC_SUB_DEL_REQ"],
+       "rxMessages": ["RIC_SUB_RESP", "RIC_SUB_FAILURE", "RIC_SUB_DEL_RESP", "RIC_SUB_DEL_FAILURE", "RIC_INDICATION"],
+	"file_path":"/tmp/routeinfo/routes.txt",
+	"contents": "newrt|start\nrte|0|localhost:4560\nrte|2|service-ricplt-e2term-rmr:38000\nrte|10002|localhost:4560\nrte|10005|localhost:4560\nrte|10003|service-ricplt-e2term-rmr:38000\nrte|12010|service-ricplt-e2term-rmr:38000\nrte|12020|service-ricplt-e2term-rmr:38000\nrte|12011|localhost:4560\nrte|12012|localhost:4560\nrte|12021|localhost:4560\nrte|12022|localhost:4560\nrte|20000|localhost:4560\nrte|20001|localhost:4566\nnewrt|end "
+    },
+    
+    "envs":{
+	"gNodeB":"NYC123",
+	"THREADS":"1",
+        "A1_SCHEMA_FILE":"/etc/xapp/adm-ctrl-xapp-schema.json",
+        "VES_SCHEMA_FILE":"/etc/xapp/ves_schema.json",
+        "SAMPLE_FILE":"/etc/xapp/samples.json",
+        "VES_COLLECTOR_URL":"127.0.0.1:6350",
+        "VES_MEASUREMENT_INTERVAL":"10"
+    }
+}
