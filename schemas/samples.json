@@ -1,0 +1,40 @@
+{
+ "message_receives_example": {
+	    "enforce":true,
+	    "window_length":10,
+	    "blocking_rate":20,
+	    "trigger_threshold":10
+  },
+
+ "message_sends_example": {
+  "status":"SUCCESS",
+  "message":"Config applied"
+ },
+
+ "metrics": {
+  "event": {
+    "commonEventHeader": {
+      "startEpochMicrosec": 1542231546086613,
+      "eventId": "sGNB Requests",
+      "eventType": "sGNB Request Rate",
+      "priority": "Normal",
+      "version": "4.0.1",
+      "reportingEntityName": "AC xAPP",
+      "sequence": 0,
+      "domain": "measurement",
+      "lastEpochMicrosec": 1542231556086613,
+      "eventName": "Measurement_vGMUX",
+      "sourceName": "adm-ctrl-xapp",
+      "vesEventListenerVersion": "7.0.1"
+    },
+   "measurementFields": {
+	  "additionalFields":{
+		"SgNB Request Rate":"100",
+                "SgNB Accept Rate":"10"
+          },
+          "measurementInterval":60,
+          "measurementFieldsVersion":"4.0"
+    }
+  }
+ }
+}
