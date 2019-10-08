@@ -127,7 +127,7 @@ bool SubscriptionHandler::RequestSubscription(subscription_helper &he, subscript
 
   // get a new unique request id ...
   unsigned int new_req_id = get_next_id();
-  std::cout <<"Using id = " << new_req_id << std::endl;
+  mdclog_write(MDCLOG_INFO, "%s, %d:: Generated new request id %d\n", __FILE__, __LINE__, new_req_id);
   he.set_request(new_req_id, he.get_req_seq());
   
   E2AP_PDU_t *e2ap_pdu = 0;
@@ -154,7 +154,6 @@ bool SubscriptionHandler::RequestSubscription(subscription_helper &he, subscript
   std::unique_lock<std::mutex> _local_lock(*(_data_lock.get()));
 
 
-  
   // Send the message
   res = tx(TxCode,  buf_len, buffer);
   if (!res){
@@ -171,8 +170,7 @@ bool SubscriptionHandler::RequestSubscription(subscription_helper &he, subscript
   while(1){
 
 
-      
-    // wait to be woken up
+    // release lock and wait to be woken up
     _cv.get()->wait_for(_local_lock, _time_out);
     
     // we have woken and acquired data_lock 
@@ -181,18 +179,28 @@ bool SubscriptionHandler::RequestSubscription(subscription_helper &he, subscript
     int status = get_request_status(he.get_request_id());
     
     if (status == request_success){
+      // retreive the subscription response and clear queue
+      response = subscription_responses[he.get_request_id()];
+
+      // clear state
+      delete_request_entry(he.get_request_id());
+      
+      // release data lock
+      _local_lock.unlock();
       mdclog_write(MDCLOG_INFO, "Successfully subscribed for request %d", he.get_request_id());
+ 
       break;
     }
     
     if (status == request_pending){
+
       // woken up spuriously or timed out 
       auto end = std::chrono::system_clock::now();
       std::chrono::duration<double> f = end - start;
       
       if (_time_out_flag && f > _num_retries * _time_out){
 	delete_request_entry(he.get_request_id());
-	mdclog_write(MDCLOG_ERR, "Subscription request %d timed out waiting for response ", he.get_request_id());
+	mdclog_write(MDCLOG_ERR, "%s, %d:: Subscription request %d timed out waiting for response ", __FILE__, __LINE__, he.get_request_id());
 
 	// Release data lock
 	_local_lock.unlock();
@@ -204,8 +212,9 @@ bool SubscriptionHandler::RequestSubscription(subscription_helper &he, subscript
       }
     }
 
-    // if we are hear, some spurious
+    // if we are here, some spurious
     // status obtained or request failed . we return false
+    mdclog_write(MDCLOG_ERR, "Error :: %s, %d : Spurious time out caused by invalid state of request %d -- state = %d. Deleting request entry and failing .. \n", __FILE__, __LINE__, he.get_request_id(), status);
     delete_request_entry(he.get_request_id());
     
     // release data lock
@@ -215,12 +224,6 @@ bool SubscriptionHandler::RequestSubscription(subscription_helper &he, subscript
     
   };
 	     
-  // retreive the subscription response and clear queue
-  response = subscription_responses[he.get_request_id()];
-  delete_request_entry(he.get_request_id());
-
-  // release data lock
-  _local_lock.unlock();
   
   return true;
 };

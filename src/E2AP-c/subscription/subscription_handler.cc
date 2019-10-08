@@ -214,14 +214,15 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
 
   if(retval.code != RC_OK){
     mdclog_write(MDCLOG_ERR, "%s, %d: Error decoding E2AP PDU of RMR type %d. Bytes decoded = %lu out of %d\n", __FILE__, __LINE__, message_type, retval.consumed, payload_length);
-    return;
+    ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, e2ap_recv);
+    return ;
   }
   
   type = e2ap_recv->present;
   mdclog_write(MDCLOG_INFO, "Received RMR message of type = %d", type);
   
   if(type == E2AP_PDU_PR_successfulOutcome){
-
+    
     procedureCode =  e2ap_recv->choice.successfulOutcome->procedureCode;
     mdclog_write(MDCLOG_INFO, "Received E2AP PDU  successful outcome message with procedureCode = %d", procedureCode);  
 
@@ -229,23 +230,33 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
       // subscription response
       // decode the message
       sub_resp.get_fields(e2ap_recv->choice.successfulOutcome, he_response);
+
       {
 	std::lock_guard<std::mutex> lock(*(_data_lock.get()));
 	// get the id
 	id = he_response.get_request_id();
-	if (get_request_status(id) == request_pending ){
+	// get status of id 
+	int req_status = get_request_status(id);
+	if (req_status == request_pending ){
 	  res = add_subscription_entry(id, he_response);
 	  if(res)
 	    set_request_status(id, request_success);
 	  
-	  else
+	  else{
 	    set_request_status(id, request_duplicate);
-
+	    mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %d seems to be a duplicate\n", __FILE__, __LINE__, id);
+	  }
+	  
 	  valid_response = true;
 	}
+	else if (req_status > 0){
+	  // we don't change status of response since it was not in pending
+	  // we simply fail
+	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %d is not in request_pending state, is in State = %d\n", __FILE__, __LINE__, id, req_status);
+	  
+	}
 	else{
-	  std::string error_string =  "Could not find id to match response = ";
-	  mdclog_write(MDCLOG_ERR,  "%s, %d: %s, %d", __FILE__, __LINE__, error_string.c_str(), id);
+	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find id %d in request queue for subscription", __FILE__, __LINE__,  id);
 	}	  
 	
       }
@@ -259,7 +270,8 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
 	std::lock_guard<std::mutex> lock(*(_data_lock.get()));
 	// get the id
 	id = he_response.get_request_id();
-	if (get_request_status(id) == delete_request_pending ){
+	int req_status = get_request_status(id);
+	if (req_status == delete_request_pending ){
 	  // Remove the subscription from the table 
 	  res = delete_subscription_entry(id);
 	  if(res){
@@ -267,22 +279,26 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
 	    valid_response = true;
 	  }
 	  else{
+	    set_request_status(id, delete_request_failed);
 	    std::string error_string = "Error deleting subscription entry for id = ";
 	    mdclog_write(MDCLOG_ERR,  "%s, %d: %s, %d", __FILE__, __LINE__, error_string.c_str(), id);
+	    valid_response = true;
 	  } 
 	}      
-	
+	else if (req_status > 0){
+	  // we don't change status since it was not in pending
+	  // we simply fail
+	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %d for deletion  is not in delete_pending state, is in State = %d\n", __FILE__, __LINE__, id, req_status);
+	}
 	else{
-	  std::string error_string = "Could not find id for deletion = ";
-	  mdclog_write(MDCLOG_ERR,  "%s, %d: %s, %d", __FILE__, __LINE__, error_string.c_str(), id);
+	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find id  %d in request queue for deletion ", __FILE__, __LINE__,  id);
 	}
 
       }
-    }  
+    }
 
     else{
-      std::string error_string = "Handler received E2AP subscription message with  Unknown procedure code =" ;
-      mdclog_write(MDCLOG_ERR,  "%s, %d: %s, %d", __FILE__, __LINE__, error_string.c_str(), procedureCode);
+      mdclog_write(MDCLOG_ERR,  "%s, %d: Subscription Handler Response received E2AP PDU success  response with an non-subscription response related type  %d", __FILE__, __LINE__, procedureCode);
     }
     
   }
@@ -298,15 +314,19 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
       {
 	std::lock_guard<std::mutex> lock(*(_data_lock.get()));  
 	id = he_response.get_request_id();
-	
-	if(get_request_status(id) == request_pending){
+	int req_status = get_request_status(id);
+	if(req_status == request_pending){
 	  set_request_status(id, request_failed);
 	  valid_response = true;
-	  mdclog_write(MDCLOG_INFO, "Subscription request %d failed", id);
+	  mdclog_write(MDCLOG_ERR, "Subscription request %d failed", id);
+	}
+	else if (req_status > 0){
+	  // we don't changet status since it was not in pending
+	  // we simply fail
+	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %d is not in request_pending state, is in State = %d\n", __FILE__, __LINE__, id, req_status);
 	}
 	else{
-	  std::string error_string =  "Could not find id to match response = ";
-	  mdclog_write(MDCLOG_ERR,  "%s, %d: %s, %d", __FILE__, __LINE__, error_string.c_str(), id);
+	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find id   %d in request queue for subscription ", __FILE__, __LINE__, id);
 	}
       }
     }
@@ -318,23 +338,28 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
 	std::lock_guard<std::mutex> lock(*(_data_lock.get()));
 	// get the id
 	id = he_response.get_request_id();
-	if(get_request_status(id) == delete_request_pending){
+	int req_status = get_request_status(id);
+	if(req_status == delete_request_pending){
 	  set_request_status(id, delete_request_failed);
 	  mdclog_write(MDCLOG_INFO, "Subscription delete request %d failed", id);
 	  valid_response = true;
 	}
+	else if (req_status > 0){
+	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %d for deletion  is not in delete_pending state, is in State = %d\n", __FILE__, __LINE__, id, req_status);
+	}
 	else{
-	  std::string error_string =  "Could not find id to match response = ";
-	  mdclog_write(MDCLOG_ERR,  "%s, %d: %s, %d", __FILE__, __LINE__, error_string.c_str(), id);
-	  return;
+	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find id  %d  in request queue for deletion ", __FILE__, __LINE__, id);
 	}
 	
       }
     }
-  }  
+    else{
+      mdclog_write(MDCLOG_ERR,  "%s, %d: Susbcription Handler Response received E2AP PDU failure response with a non-subscription response related type  %d", __FILE__, __LINE__,  procedureCode);
+
+    }
+  }
   else{
-    std::string error_string = "Handler received E2AP subscription message with  Unknown procedure code =" ;
-    mdclog_write(MDCLOG_ERR,  "%s, %d: %s, %d", __FILE__, __LINE__, error_string.c_str(), procedureCode);
+    mdclog_write(MDCLOG_ERR,  "%s, %d: Susbcription Handler Response received E2AP PDU with non response type  %d", __FILE__, __LINE__, type);
   }
   
   
