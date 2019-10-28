@@ -19,7 +19,7 @@
 
 
 #include "admission_policy.hpp"
-admission::admission (std::string policy_schema_file, std::string samples_file,  std::string metrics_schema_file, unsigned int num_instances){
+admission::admission (std::string policy_schema_file, std::string samples_file,  std::string metrics_schema_file, unsigned int num_instances, bool report_only){
   bool res;
   
   if (num_instances == 0){
@@ -123,13 +123,13 @@ admission::admission (std::string policy_schema_file, std::string samples_file, 
   
   //instantiate the core policy object
   for(unsigned int i = 0; i < num_instances; i++){
-    instantiate_protector_plugin();
+    instantiate_protector_plugin(report_only);
   }
   
 };
 
-void admission::instantiate_protector_plugin(void){
-  _plugin_instances.emplace_back(bool(current_config["enforce"]), current_config["window_length"], current_config["blocking_rate"], current_config["trigger_threshold"]);
+void admission::instantiate_protector_plugin(bool mode){
+  _plugin_instances.emplace_back(bool(current_config["enforce"]), current_config["window_length"], current_config["blocking_rate"], current_config["trigger_threshold"], mode);
 }
 
 admission::~admission(void){

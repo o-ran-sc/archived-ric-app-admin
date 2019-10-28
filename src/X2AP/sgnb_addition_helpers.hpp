@@ -129,6 +129,26 @@ public:
     erab_list.clear();
     erab_admitted_list.clear();
     erab_not_admitted_list.clear();
+    
+    subscriber_profile_id = -1;
+    menb_ue_x2ap_id = -1;
+    sgnb_ue_x2ap_id = -1;
+    encryption_algs = 0;
+    encryption_algs_size = 0;
+    integrity_protection_algs = 0;
+    integrity_protection_algs_size = 0;
+    sgnb_security_key = 0;
+    sgnb_security_key_size = 0;
+    bit_rate_max_up = -1;
+    bit_rate_max_dn = -1;
+    menb_sgnb_container = 0;
+    selected_plmn = 0;
+    selected_plmn_size = 0;
+    plmn_identity = 0;
+    plmn_identity_size = 0;
+    eutran_identifier = 0;
+    eutran_identifier_size = 0;
+    
   };
   
   std::vector<struct erab_item> * get_list(void) { return &erab_list;};

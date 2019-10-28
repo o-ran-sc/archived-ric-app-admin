@@ -10,7 +10,7 @@ JSON := ./json
 PLUGININTERFACE :=./plugin-interface
 CURL := ./curl
 PLUGIN:=./protector-plugin
-ASN1C_DEFS:=../asn1c_defs/all-defs
+ASN1C_DEFS:=../asn1c_defs
 
 # Logging library and flags
 CLOGFLAGS:= `pkg-config mdclog --cflags`

@@ -24,7 +24,7 @@
 #include <vector>
 #include <memory>
 
-/* Simple structure to store action for RICaction of the Subscription response based on E2 v0.22 */
+/* Simple structure to store action for RICaction of the Subscription response based on E2 v0.31 */
 struct ActionResponse {
 public:
   ActionResponse(int id): _is_admit(true), _id(id), _cause(-1), _sub_cause(-1){};

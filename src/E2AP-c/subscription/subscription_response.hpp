@@ -28,16 +28,16 @@
 #include <response_helper.hpp>
   
 #include <asn_application.h>
-#include <E2AP-PDU.h>
-#include<SuccessfulOutcome.h>
-#include<UnsuccessfulOutcome.h>
-#include <ProtocolIE-Field.h>
-#include <ProtocolIE-Single-Container.h>
-#include <ProcedureCode.h>
+#include <E2N_E2AP-PDU.h>
+#include <E2N_SuccessfulOutcome.h>
+#include <E2N_UnsuccessfulOutcome.h>
+#include <E2N_ProtocolIE-Field.h>
+#include <E2N_ProtocolIE-Single-Container.h>
+#include <E2N_ProcedureCode.h>
 
 #define NUM_SUBSCRIPTION_RESPONSE_IES 4
 #define NUM_SUBSCRIPTION_FAILURE_IES 3
-#define INITIAL_LIST_SIZE 4
+#define INITIAL_RESPONSE_LIST_SIZE 4
   
 class subscription_response{   
 public:
@@ -45,30 +45,30 @@ public:
   subscription_response(void);
   ~subscription_response(void);
     
-  bool encode_e2ap_subscription_response(unsigned char *, size_t *, E2AP_PDU_t *, subscription_response_helper &, bool);
-  void set_fields(SuccessfulOutcome_t *, subscription_response_helper &);
-  void get_fields(SuccessfulOutcome_t *, subscription_response_helper &);
-    
-  void set_fields(UnsuccessfulOutcome_t *, subscription_response_helper &);
-  void get_fields(UnsuccessfulOutcome_t *, subscription_response_helper &);
+  bool encode_e2ap_subscription_response(unsigned char *, size_t *,  subscription_response_helper &, bool);
+  void get_fields(E2N_SuccessfulOutcome_t *, subscription_response_helper &);    
+  void get_fields(E2N_UnsuccessfulOutcome_t *, subscription_response_helper &);
   
-  std::string get_error_string(void) const{
+  std::string get_error(void) const{
     return error_string;
   }
     
 private:
 
-  E2AP_PDU_t * e2ap_pdu_obj;
-  SuccessfulOutcome_t * successMsg;
-  UnsuccessfulOutcome_t * unsuccessMsg;
+  void set_fields_success( subscription_response_helper &);
+  void set_fields_unsuccess( subscription_response_helper &);
+
+  E2N_E2AP_PDU_t * e2ap_pdu_obj;
+  E2N_SuccessfulOutcome_t * successMsg;
+  E2N_UnsuccessfulOutcome_t * unsuccessMsg;
     
 
-  RICsubscriptionResponse_IEs_t *IE_array;
-  RICsubscriptionFailure_IEs_t *IE_Failure_array;
+  E2N_RICsubscriptionResponse_IEs_t *IE_array;
+  E2N_RICsubscriptionFailure_IEs_t *IE_Failure_array;
   
 
-  RICaction_Admitted_ItemIEs_t * ie_admitted_list;
-  RICaction_NotAdmitted_ItemIEs_t * ie_not_admitted_list;
+  E2N_RICaction_Admitted_ItemIEs_t * ie_admitted_list;
+  E2N_RICaction_NotAdmitted_ItemIEs_t * ie_not_admitted_list;
   unsigned int ie_admitted_list_size, ie_not_admitted_list_size;
   
   char errbuf[128];

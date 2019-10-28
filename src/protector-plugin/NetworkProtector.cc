@@ -26,11 +26,12 @@
 #include <cstdlib>  // For srand() and rand()
 
 
-protector::protector(bool enforce,   int windowSize_, int threshold_, double blockRate_):  m_enforce(enforce),  m_windowSize(windowSize_), m_threshold(threshold_), m_blockRate(blockRate_), m_req(0), m_rej(0)
+protector::protector(bool enforce,   int windowSize_, int threshold_, double blockRate_, bool report):  m_enforce(enforce),  m_windowSize(windowSize_), m_threshold(threshold_), m_blockRate(blockRate_), m_req(0), m_rej(0)
 {	
   m_counter = 0;
   m_window_ref = std::make_unique<sliding_window>(m_windowSize);
   m_access = std::make_unique<std::mutex>();
+  report_mode_only = report;
 }
 
 
@@ -40,18 +41,20 @@ bool protector::operator()(unsigned char *msg_ref, size_t msg_size, unsigned cha
   bool res = true;
   
   std::lock_guard<std::mutex> lck(*(m_access.get()));
-
-  X2AP_PDU_t * x2ap_recv = 0;
-
+  
+  X2N_X2AP_PDU_t * x2ap_recv = 0;
+  asn_dec_rval_t dec_res;
+  
   // /* Decode */
-  asn_dec_rval_t dec_res = asn_decode(0,ATS_ALIGNED_BASIC_PER, &asn_DEF_X2AP_PDU, (void **)&x2ap_recv, msg_ref, msg_size);
-
-  /* Is this an SgNB Addition request ? */
+  dec_res = asn_decode(0,ATS_ALIGNED_BASIC_PER, &asn_DEF_X2N_X2AP_PDU, (void **)&x2ap_recv, msg_ref, msg_size);
+  
   if (dec_res.code == RC_OK){
-    if (x2ap_recv->present == X2AP_PDU_PR_initiatingMessage){
-      if (x2ap_recv->choice.initiatingMessage->procedureCode ==  ProcedureCode_id_sgNBAdditionPreparation ){
-	if (x2ap_recv->choice.initiatingMessage->value.present ==  X2InitiatingMessage__value_PR_SgNBAdditionRequest){
-	  mdclog_write(MDCLOG_INFO, "Processing X2AP SgNB Addition Request message\n");
+    /* Is this an SgNB Addition request ? */
+    mdclog_write(MDCLOG_DEBUG, "Decoded X2AP PDU successfully. Processing X2 message fields to ascertain type etc ...\n");
+    if (x2ap_recv->present == X2N_X2AP_PDU_PR_initiatingMessage){
+      if (x2ap_recv->choice.initiatingMessage->procedureCode ==  X2N_ProcedureCode_id_sgNBAdditionPreparation ){
+	if (x2ap_recv->choice.initiatingMessage->value.present ==  X2N_InitiatingMessage__value_PR_SgNBAdditionRequest){
+	  mdclog_write(MDCLOG_DEBUG, "Processing X2AP SgNB Addition Request message\n");
 	  res = true;
 	}
 	else{
@@ -60,7 +63,7 @@ bool protector::operator()(unsigned char *msg_ref, size_t msg_size, unsigned cha
 	}
       }
       else{
-	mdclog_write(MDCLOG_ERR, "Error :: %s, %d:: X2AP procedure code  %d does not match required %d\n", __FILE__, __LINE__, x2ap_recv->choice.initiatingMessage->procedureCode, ProcedureCode_id_sgNBAdditionPreparation);
+	mdclog_write(MDCLOG_ERR, "Error :: %s, %d:: X2AP procedure code  %ld does not match required %ld\n", __FILE__, __LINE__, x2ap_recv->choice.initiatingMessage->procedureCode, X2N_ProcedureCode_id_sgNBAdditionPreparation);
 	res = false;
       }
     }
@@ -70,12 +73,14 @@ bool protector::operator()(unsigned char *msg_ref, size_t msg_size, unsigned cha
     }
   }
   else{
-    mdclog_write(MDCLOG_ERR, "Error :: %s, %d :: Could not decode X2AP PDU of size %lu bytes \n", __FILE__, __LINE__, msg_size);
+    mdclog_write(MDCLOG_ERR, "Error :: %s, %d :: Could not decode X2AP PDU of size %lu bytes\n", __FILE__, __LINE__, msg_size);
     res = false;
   }
-
+  
   if (res){
-    
+
+    mdclog_write(MDCLOG_DEBUG, "Extracting SgNB Addition Request fields...");
+
     //std::cout <<"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;
     //xer_fprint(stdout,  &asn_DEF_X2AP_PDU, x2ap_recv);
     //std::cout <<"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;
@@ -86,12 +91,15 @@ bool protector::operator()(unsigned char *msg_ref, size_t msg_size, unsigned cha
     }
     
     if (res){
-      // Admission control
-      
+      mdclog_write(MDCLOG_DEBUG, "Decoded and extracted X2AP PDU data. Number of erabs = %u\n", sgnb_data.get_list()->size());
+      mdclog_write(MDCLOG_DEBUG, "Applying admission control logic ...");
+
+      // Admission control  
       m_req ++;
+
       // update sliding window
       m_window_ref.get()->update_window(1);
-      if (m_window_ref.get()->net_events  > m_threshold && m_enforce){
+      if ( m_enforce && m_window_ref.get()->net_events  > m_threshold){
 	res = selectiveBlock();
       }
       else{
@@ -101,27 +109,37 @@ bool protector::operator()(unsigned char *msg_ref, size_t msg_size, unsigned cha
       if (!res){
           m_rej ++;
       }
-
+      
+      mdclog_write(MDCLOG_DEBUG, "Plugin decision for sgnb request = %d\n", res);
+      
       /*
-	Generate response message 
-	Do we need to do this ? 
-	What if indication is report type ?
-	plugin is agnostic to subscription for now, so yes, we always generate
-	an appropriate response
+	Generate response message if flag is set
       */
       
-      // generate sgnb addition response message (ack or reject)
-      // if rejecting , we use cause = Misc and sub-cause  = om_intervention
-      sgnb_data.cause = Cause_PR_misc;
-      sgnb_data.cause_desc = CauseMisc_om_intervention;
-      res = sgnb_resp.encode_sgnb_addition_response(buffer, buf_size, sgnb_data, res);
-      if (! res){
-	mdclog_write(MDCLOG_ERR, "Error :: %s, %d :: could not encode SgNB Addition Response PDU. Reason = %s\n", __FILE__, __LINE__, sgnb_resp.get_error().c_str());
+      if(! report_mode_only){
+	// generate sgnb addition response message (ack or reject)
+	// if rejecting , we use cause = Misc and sub-cause  = om_intervention
+	mdclog_write(MDCLOG_DEBUG, "Generating X2AP response ..\n");
+	sgnb_data.cause = X2N_Cause_PR_misc;
+	sgnb_data.cause_desc = X2N_CauseMisc_om_intervention;
+	try{
+	  res = sgnb_resp.encode_sgnb_addition_response(buffer, buf_size, sgnb_data, res);
+	  if (! res){
+	    mdclog_write(MDCLOG_ERR, "Error :: %s, %d :: could not encode SgNB Addition Response PDU. Reason = %s\n", __FILE__, __LINE__, sgnb_resp.get_error().c_str());
+	  }
+	}
+	catch(std::exception &e){
+	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d : Caught exception %s\n", __FILE__, __LINE__, e.what());
+	}
+	
+      }
+      else{
+	res = true;
       }
     }
   }
 
-  ASN_STRUCT_FREE(asn_DEF_X2AP_PDU, x2ap_recv);
+  ASN_STRUCT_FREE(asn_DEF_X2N_X2AP_PDU, x2ap_recv);
   return res;
   
 }

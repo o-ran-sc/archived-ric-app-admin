@@ -30,16 +30,16 @@
 #include <errno.h>
 #include <mdclog/mdclog.h>
 #include <sstream>
-#include <X2AP-PDU.h>
-#include <X2SuccessfulOutcome.h>
-#include <X2UnsuccessfulOutcome.h>
-#include <SgNBAdditionRequestAcknowledge.h>
-#include <SgNBAdditionRequestReject.h>
-#include <ProtocolIE-Field.h>
-#include <E-RABs-Admitted-ToBeAdded-SgNBAddReqAck-Item.h>
-#include <E-RABs-Admitted-ToBeAdded-SgNBAddReqAck-Item-SgNBPDCPnotpresent.h>
-#include <E-RABs-Admitted-ToBeAdded-SgNBAddReqAck-Item-SgNBPDCPpresent.h>
-#include <GBR-QosInformation.h>
+#include <X2N_X2AP-PDU.h>
+#include <X2N_SuccessfulOutcome.h>
+#include <X2N_UnsuccessfulOutcome.h>
+#include <X2N_SgNBAdditionRequestAcknowledge.h>
+#include <X2N_SgNBAdditionRequestReject.h>
+#include <X2N_ProtocolIE-Field.h>
+#include <X2N_E-RABs-Admitted-ToBeAdded-SgNBAddReqAck-Item.h>
+#include <X2N_E-RABs-Admitted-ToBeAdded-SgNBAddReqAck-Item-SgNBPDCPnotpresent.h>
+#include <X2N_E-RABs-Admitted-ToBeAdded-SgNBAddReqAck-Item-SgNBPDCPpresent.h>
+#include <X2N_GBR-QosInformation.h>
 #include <sgnb_addition_helpers.hpp>
 
 #define NUM_SGNB_ADDITION_RESPONSE_ACKNOWLEDGE_IES 4
@@ -54,29 +54,29 @@ public:
 
   bool encode_sgnb_addition_response(unsigned char *, size_t *, sgnb_addition_helper &, bool);
 
-  bool set_fields(X2SuccessfulOutcome_t *, sgnb_addition_helper &);
-  bool get_fields(X2SuccessfulOutcome_t * ,sgnb_addition_helper &);
+  bool set_fields(X2N_SuccessfulOutcome_t *, sgnb_addition_helper &);
+  bool get_fields(X2N_SuccessfulOutcome_t * ,sgnb_addition_helper &);
 
-  bool set_fields(X2UnsuccessfulOutcome_t *, sgnb_addition_helper &);
-  bool get_fields(X2UnsuccessfulOutcome_t * ,sgnb_addition_helper &);
+  bool set_fields(X2N_UnsuccessfulOutcome_t *, sgnb_addition_helper &);
+  bool get_fields(X2N_UnsuccessfulOutcome_t * ,sgnb_addition_helper &);
   
   std::string get_error(void) const {return error_string; };
   
 private:
 
   bool sgnb_response;
-  X2AP_PDU_t * x2ap_pdu_obj;
-  X2SuccessfulOutcome_t * successMsg;
-  X2UnsuccessfulOutcome_t * unsuccessMsg;
+  X2N_X2AP_PDU_t * x2ap_pdu_obj;
+  X2N_SuccessfulOutcome_t * successMsg;
+  X2N_UnsuccessfulOutcome_t * unsuccessMsg;
   
-  SgNBAdditionRequestAcknowledge_IEs_t * IE_array;
-  SgNBAdditionRequestReject_IEs_t * IE_reject_array;
+  X2N_SgNBAdditionRequestAcknowledge_IEs_t * IE_array;
+  X2N_SgNBAdditionRequestReject_IEs_t * IE_reject_array;
   
-  E_RABs_Admitted_ToBeAdded_SgNBAddReqAck_ItemIEs_t * erab_admit_array;
+  X2N_E_RABs_Admitted_ToBeAdded_SgNBAddReqAck_ItemIEs_t * erab_admit_array;
   size_t erab_admit_array_size;
   
-  E_RABs_Admitted_ToBeAdded_SgNBAddReqAck_Item_SgNBPDCPpresent_t * erab_sgnb_present_array;
-  E_RABs_Admitted_ToBeAdded_SgNBAddReqAck_Item_SgNBPDCPnotpresent_t * erab_sgnb_notpresent_array;
+  X2N_E_RABs_Admitted_ToBeAdded_SgNBAddReqAck_Item_SgNBPDCPpresent_t * erab_sgnb_present_array;
+  X2N_E_RABs_Admitted_ToBeAdded_SgNBAddReqAck_Item_SgNBPDCPnotpresent_t * erab_sgnb_notpresent_array;
   size_t erab_sgnb_present_array_size ;
   size_t erab_sgnb_notpresent_array_size;
   

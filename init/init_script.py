@@ -136,6 +136,8 @@ if __name__ == "__main__":
         print("Error! No configuration file specified\n");
         sys.exit(1);
         
+    if len(sys.argv) > 2:
+        cmd = sys.argv[2];
 
     with open(config_file, 'r') as f:
          try:

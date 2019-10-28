@@ -63,8 +63,10 @@ struct configuration {
   unsigned int measurement_interval = 0;
   int log_level = MDCLOG_WARN;
   int test_mode = 0;
+  ProcessingLevelTypes processing_level = ProcessingLevelTypes::ALL;
+  bool report_mode_only = true;
   std::string operating_mode = "REPORT";
-
+  int max_sub_loops = 2;
   void fill_gnodeb_list(char * gNodeB_string){
     gNodeB_list.clear();
     char * gnb = strtok(gNodeB_string, ",");
@@ -83,4 +85,5 @@ void usage(char *command);
 void get_environment_config(configuration & config_instance);
 void get_command_line_config(int argc, char **argv, configuration &config_instance);
 extern bool report_mode_only;
+
 #endif

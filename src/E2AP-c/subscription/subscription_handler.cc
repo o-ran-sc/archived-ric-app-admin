@@ -24,7 +24,7 @@
 #include <subscription_handler.hpp>
 #include <errno.h>
 
-SubscriptionHandler::SubscriptionHandler(void){
+subscription_handler::subscription_handler(void){
 
   init();
   _time_out =  std::chrono::seconds(5);
@@ -34,7 +34,7 @@ SubscriptionHandler::SubscriptionHandler(void){
   // unsigned char buffer[128];
   // size_t buf_len = 128;
   
-  // E2AP_PDU_t e2ap_pdu;
+  // E2N_E2AP_PDU_t e2ap_pdu;
   // subscription_request e2ap_sub_req;
 
   // int request_id = 2;
@@ -64,20 +64,18 @@ SubscriptionHandler::SubscriptionHandler(void){
  
 }
 
-SubscriptionHandler::SubscriptionHandler(unsigned int timeout_seconds, unsigned int num_tries):_time_out(std::chrono::seconds(timeout_seconds)), _num_retries(num_tries){
-  init();
-
-   
+subscription_handler::subscription_handler(unsigned int timeout_seconds, unsigned int num_tries):_time_out(std::chrono::seconds(timeout_seconds)), _num_retries(num_tries){
+  init();   
 };
 
-void SubscriptionHandler::init(void){
+void subscription_handler::init(void){
   
   _data_lock = std::make_unique<std::mutex>();
   _cv = std::make_unique<std::condition_variable>();
   
 }
 
-void SubscriptionHandler::clear(void){
+void subscription_handler::clear(void){
   {
     std::lock_guard<std::mutex> lock(*(_data_lock).get());
     requests_table.clear();
@@ -86,35 +84,31 @@ void SubscriptionHandler::clear(void){
   
 };
 
-size_t SubscriptionHandler::num_pending(void) const {
+size_t subscription_handler::num_pending(void) const {
   return requests_table.size();
 }
 
-size_t SubscriptionHandler::num_complete(void) const {
+size_t subscription_handler::num_complete(void) const {
   return subscription_responses.size();
 }
 
 
-void SubscriptionHandler::set_timeout(unsigned int timeout_seconds){
+void subscription_handler::set_timeout(unsigned int timeout_seconds){
   _time_out = std::chrono::seconds(timeout_seconds);
 }
 
-void SubscriptionHandler::set_timeout_flag(bool val){
-  _time_out_flag = val;
-}
-
-void SubscriptionHandler::set_num_retries(unsigned int num_tries){
+void subscription_handler::set_num_retries(unsigned int num_tries){
   _num_retries = num_tries;
 };
 
 
-unsigned int SubscriptionHandler::get_next_id(void){
+unsigned int subscription_handler::get_next_id(void){
   std::lock_guard<std::mutex> lock(*(_data_lock).get());
   unique_request_id ++;
   return unique_request_id;
 }
 
-bool SubscriptionHandler::add_request_entry(int id, int status){
+bool subscription_handler::add_request_entry(int id, int status){
 
   // add entry in hash table if it does not exist
   auto search = requests_table.find(id);
@@ -127,7 +121,7 @@ bool SubscriptionHandler::add_request_entry(int id, int status){
 
 };
 
-bool SubscriptionHandler::set_request_status(int id, int status){
+bool subscription_handler::set_request_status(int id, int status){
   
   // change status of a request only if it exists.
 
@@ -142,7 +136,7 @@ bool SubscriptionHandler::set_request_status(int id, int status){
 };
 
 
-bool SubscriptionHandler::delete_request_entry(int id){
+bool subscription_handler::delete_request_entry(int id){
 
   auto search = requests_table.find(id);
   if (search != requests_table.end()){
@@ -153,7 +147,7 @@ bool SubscriptionHandler::delete_request_entry(int id){
   return false;
 };
   
-bool SubscriptionHandler::add_subscription_entry(int id, subscription_response_helper &he){
+bool subscription_handler::add_subscription_entry(int id, subscription_response_helper &he){
 
   auto search = subscription_responses.find(id);
   if (search == subscription_responses.end()){
@@ -165,7 +159,7 @@ bool SubscriptionHandler::add_subscription_entry(int id, subscription_response_h
 }
 
 
-bool SubscriptionHandler::delete_subscription_entry(int id){
+bool subscription_handler::delete_subscription_entry(int id){
 
   auto search = subscription_responses.find(id);
   if(search == subscription_responses.end()){
@@ -178,7 +172,7 @@ bool SubscriptionHandler::delete_subscription_entry(int id){
   
 }
 
-subscription_response_helper *  const SubscriptionHandler::get_subscription(int id){
+subscription_response_helper *  const subscription_handler::get_subscription(int id){
   auto search = subscription_responses.find(id);
   if(search == subscription_responses.end()){
     return NULL;
@@ -190,7 +184,7 @@ subscription_response_helper *  const SubscriptionHandler::get_subscription(int 
 
 
 // Handles responses from RMR
-void SubscriptionHandler::Response(int message_type, unsigned char *payload, int payload_length){
+void subscription_handler::Response(int message_type, unsigned char *payload, int payload_length){
 
   bool res;
   int id;
@@ -198,7 +192,7 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
   int procedureCode;
   bool valid_response  =false;
   
-  E2AP_PDU_t * e2ap_recv;
+  E2N_E2AP_PDU_t * e2ap_recv;
   asn_dec_rval_t retval;
 
   subscription_response sub_resp;
@@ -206,27 +200,25 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
 
   subscription_response_helper he_response;
 
-  char buf[512];
-  size_t buf_size = 512;
 
   e2ap_recv = 0;
-  retval = asn_decode(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2AP_PDU, (void**)&(e2ap_recv), payload, payload_length);
+  retval = asn_decode(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2N_E2AP_PDU, (void**)&(e2ap_recv), payload, payload_length);
 
   if(retval.code != RC_OK){
     mdclog_write(MDCLOG_ERR, "%s, %d: Error decoding E2AP PDU of RMR type %d. Bytes decoded = %lu out of %d\n", __FILE__, __LINE__, message_type, retval.consumed, payload_length);
-    ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, e2ap_recv);
+    ASN_STRUCT_FREE(asn_DEF_E2N_E2AP_PDU, e2ap_recv);
     return ;
   }
   
   type = e2ap_recv->present;
   mdclog_write(MDCLOG_INFO, "Received RMR message of type = %d", type);
   
-  if(type == E2AP_PDU_PR_successfulOutcome){
+  if(type == E2N_E2AP_PDU_PR_successfulOutcome){
     
     procedureCode =  e2ap_recv->choice.successfulOutcome->procedureCode;
-    mdclog_write(MDCLOG_INFO, "Received E2AP PDU  successful outcome message with procedureCode = %d", procedureCode);  
+    mdclog_write(MDCLOG_INFO, "Received E2N_E2AP PDU  successful outcome message with procedureCode = %d", procedureCode);  
 
-    if( procedureCode == ProcedureCode_id_ricSubscription){  
+    if( procedureCode == E2N_ProcedureCode_id_ricSubscription){  
       // subscription response
       // decode the message
       sub_resp.get_fields(e2ap_recv->choice.successfulOutcome, he_response);
@@ -263,7 +255,7 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
       
     }
     
-    else if( procedureCode == ProcedureCode_id_ricSubscriptionDelete){
+    else if( procedureCode == E2N_ProcedureCode_id_ricSubscriptionDelete){
       
       res = sub_del_resp.get_fields(e2ap_recv->choice.successfulOutcome, he_response);
       {
@@ -303,12 +295,12 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
     
   }
   
-  else if(type == E2AP_PDU_PR_unsuccessfulOutcome){
+  else if(type == E2N_E2AP_PDU_PR_unsuccessfulOutcome){
     
     procedureCode = e2ap_recv->choice.unsuccessfulOutcome->procedureCode;
     mdclog_write(MDCLOG_INFO, "Received E2AP PDU  unsuccessful outcome message with procedureCode = %d", procedureCode);  
     
-    if(procedureCode == ProcedureCode_id_ricSubscription){
+    if(procedureCode == E2N_ProcedureCode_id_ricSubscription){
       
       sub_resp.get_fields(e2ap_recv->choice.unsuccessfulOutcome, he_response);
       {
@@ -331,7 +323,7 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
       }
     }
     
-    else if(procedureCode == ProcedureCode_id_ricSubscriptionDelete){
+    else if(procedureCode == E2N_ProcedureCode_id_ricSubscriptionDelete){
       
       res = sub_del_resp.get_fields(e2ap_recv->choice.unsuccessfulOutcome, he_response);	
       {
@@ -363,7 +355,7 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
   }
   
   
-  ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, e2ap_recv);
+  ASN_STRUCT_FREE(asn_DEF_E2N_E2AP_PDU, e2ap_recv);
   
   // wake up all waiting users ...
   if(valid_response){
@@ -373,7 +365,7 @@ void SubscriptionHandler::Response(int message_type, unsigned char *payload, int
 }
 
 
-int const SubscriptionHandler::get_request_status(int id){
+int const subscription_handler::get_request_status(int id){
   auto search = requests_table.find(id);
   if (search == requests_table.end()){
     return -1;
@@ -382,7 +374,7 @@ int const SubscriptionHandler::get_request_status(int id){
   return search->second;
 }
 				   
- bool SubscriptionHandler::is_subscription_entry(int id){
+ bool subscription_handler::is_subscription_entry(int id){
   auto search = subscription_responses.find(id);
   if (search != subscription_responses.end())
     return true;
@@ -390,7 +382,7 @@ int const SubscriptionHandler::get_request_status(int id){
     return false;
 }
 
-bool SubscriptionHandler::is_request_entry(int id){
+bool subscription_handler::is_request_entry(int id){
   auto search = requests_table.find(id);
   if (search != requests_table.end())
     return true;

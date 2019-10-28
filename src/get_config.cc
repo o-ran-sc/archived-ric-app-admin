@@ -89,9 +89,6 @@ void get_environment_config(configuration & config_instance){
 
   if (const char *env_opmode = std::getenv("OPERATING_MODE")){
     config_instance.operating_mode.assign(env_opmode);
-    if (    config_instance.operating_mode != "REPORT" &&     config_instance.operating_mode != "CONTROL"){
-      throw std::runtime_error("Invalid operating mode: " +     config_instance.operating_mode + " Must be REPORT or CONTROL");
-    }
     mdclog_write(MDCLOG_INFO, "Operating mode set from environment variable to %s\n",     config_instance.operating_mode.c_str());
   }
 
@@ -149,7 +146,7 @@ void get_command_line_config(int argc, char **argv, configuration &config_instan
 	{"interval", required_argument, 0, 'i'},
 	{"gNodeB", required_argument, 0, 'g'},
 	{"opmode", required_argument, 0, 'c'},
-	{"verbose", no_argument, &config_instance.log_level, MDCLOG_INFO},
+	{"verbose", no_argument, &config_instance.log_level, MDCLOG_DEBUG},
 	{"test", no_argument, &config_instance.test_mode, 1},
 	 
     };
@@ -248,6 +245,6 @@ void usage(char *command){
     std::cout <<"[--gNodeB[][-g] gNodeB" << std::endl;
     std::cout <<"--interval[-i] measurement interval to send to ves collector (in seconds)" << std::endl;
     std::cout <<"--test puts xapp in test mode where it sends subscription, waits for interval and then sends delete subscription " << std::endl;
-    std::cout <<"--opmode [-c] type of operatoring mode : either REPORT or INSERT. In REPORT, does not send a control message back to gNodeB" << std::endl;
+    std::cout <<"--opmode [-c] type of operatoring mode : either REPORT or CONTROL. In REPORT, does not send a control message back to gNodeB" << std::endl;
     std::cout << "--verbose " << std::endl;
 }

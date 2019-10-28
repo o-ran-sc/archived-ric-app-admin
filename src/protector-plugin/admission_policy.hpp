@@ -39,7 +39,7 @@
 class admission: virtual public Policy
 {
 public:
-  admission(std::string, std::string, std::string, unsigned int);
+  admission(std::string, std::string, std::string, unsigned int, bool report_only=true);
   ~admission(void);
   protector * get_protector_instance(unsigned int);
   bool setPolicy(const char *, int , std::string & );
@@ -51,7 +51,7 @@ private:
   void storePolicy(void);
   void init_log(void);
   void setPolicyVars(void);
-  void instantiate_protector_plugin(void);
+  void instantiate_protector_plugin(bool);
 
   std::map<std::string, int> current_config;
   std::map<std::string, int> prev_config;

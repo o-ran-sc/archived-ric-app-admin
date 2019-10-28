@@ -52,11 +52,6 @@ bool  sliding_window::update_window(unsigned int events){
   
   int shift = std::chrono::duration_cast<std::chrono::seconds>(current_edge - leading_edge_).count();
 
-  if (shift < 0){
-    // we do not update any events if they happened in the past
-    // by more than unit of window .. (1 second currently)
-    return false;
-  }
 
   // Advance window if shift >= 1
   if (shift >= 1){

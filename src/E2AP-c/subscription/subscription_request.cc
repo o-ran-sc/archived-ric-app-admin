@@ -26,21 +26,27 @@ subscription_request::subscription_request(void){
   _name = "default";
 
   e2ap_pdu_obj = 0;
-  e2ap_pdu_obj = (E2AP_PDU_t * )calloc(1, sizeof(E2AP_PDU_t));
+  e2ap_pdu_obj = (E2N_E2AP_PDU_t * )calloc(1, sizeof(E2N_E2AP_PDU_t));
   assert(e2ap_pdu_obj != 0);
 
   initMsg = 0;
-  initMsg = (InitiatingMessage_t * )calloc(1, sizeof(InitiatingMessage_t));
+  initMsg = (E2N_InitiatingMessage_t * )calloc(1, sizeof(E2N_InitiatingMessage_t));
   assert(initMsg != 0);
 
   IE_array = 0;
-  IE_array = (RICsubscriptionRequest_IEs_t *)calloc(NUM_SUBSCRIPTION_REQUEST_IES, sizeof(RICsubscriptionRequest_IEs_t));
+  IE_array = (E2N_RICsubscriptionRequest_IEs_t *)calloc(NUM_SUBSCRIPTION_REQUEST_IES, sizeof(E2N_RICsubscriptionRequest_IEs_t));
   assert(IE_array != 0);
   
   action_array = 0;
-  action_array = (RICaction_ToBeSetup_ItemIEs_t *)calloc(INITIAL_LIST_SIZE, sizeof(RICaction_ToBeSetup_ItemIEs_t));
+  action_array = (E2N_RICaction_ToBeSetup_ItemIEs_t *)calloc(INITIAL_REQUEST_LIST_SIZE, sizeof(E2N_RICaction_ToBeSetup_ItemIEs_t));
   assert(action_array != 0);
-  action_array_size = INITIAL_LIST_SIZE;
+  action_array_size = INITIAL_REQUEST_LIST_SIZE;
+
+  
+  e2ap_pdu_obj->choice.initiatingMessage = initMsg;
+  e2ap_pdu_obj->present = E2N_E2AP_PDU_PR_initiatingMessage;
+
+
   
 };
 
@@ -49,10 +55,10 @@ subscription_request::subscription_request(void){
 // Clear assigned protocolIE list from RIC indication IE container
 subscription_request::~subscription_request(void){
     
-  mdclog_write(MDCLOG_INFO, "Freeing subscription request memory for");;
+  mdclog_write(MDCLOG_DEBUG, "Freeing subscription request memory for");;
   
   // Sequence of actions to be admitted causes special heart-ache. Free ric subscription element manually and reset the ie pointer  
-  RICsubscription_t * ricsubscription_ie = &(IE_array[2].value.choice.RICsubscription);
+  E2N_RICsubscription_t * ricsubscription_ie = &(IE_array[2].value.choice.RICsubscription);
 
   for(int i = 0; i < ricsubscription_ie->ricAction_ToBeSetup_List.list.size; i++){
     ricsubscription_ie->ricAction_ToBeSetup_List.list.array[i] = 0;
@@ -66,7 +72,7 @@ subscription_request::~subscription_request(void){
   }
   
   free(action_array);
-  RICsubscriptionRequest_t * subscription_request = &(initMsg->value.choice.RICsubscriptionRequest);
+  E2N_RICsubscriptionRequest_t * subscription_request = &(initMsg->value.choice.RICsubscriptionRequest);
   
   for(int i = 0; i < subscription_request->protocolIEs.list.size; i++){
     subscription_request->protocolIEs.list.array[i] = 0;
@@ -83,42 +89,44 @@ subscription_request::~subscription_request(void){
   free(initMsg);
   e2ap_pdu_obj->choice.initiatingMessage = 0;
   
-  ASN_STRUCT_FREE(asn_DEF_E2AP_PDU, e2ap_pdu_obj);
-  mdclog_write(MDCLOG_INFO, "Freed subscription request memory ");
+  ASN_STRUCT_FREE(asn_DEF_E2N_E2AP_PDU, e2ap_pdu_obj);
+  mdclog_write(MDCLOG_DEBUG, "Freed subscription request memory ");
 };
 
 
-bool subscription_request::encode_e2ap_subscription(unsigned char *buf, size_t *size, E2AP_PDU_t *e2ap_pdu, subscription_helper &dinput){
+bool subscription_request::encode_e2ap_subscription(unsigned char *buf, size_t *size,  subscription_helper &dinput){
 
   bool res;
-  
-  e2ap_pdu_obj->choice.initiatingMessage = initMsg;
-  e2ap_pdu_obj->present = E2AP_PDU_PR_initiatingMessage;
-  
-  res = set_fields(e2ap_pdu_obj->choice.initiatingMessage, dinput);
+
+  initMsg->procedureCode = E2N_ProcedureCode_id_ricSubscription;
+  initMsg->criticality = E2N_Criticality_ignore;
+  initMsg->value.present = E2N_InitiatingMessage__value_PR_RICsubscriptionRequest;
+
+  res = set_fields(initMsg, dinput);
   if (!res){
     return false;
   }
   
-  //xer_fprint(stdout, &asn_DEF_E2AP_PDU, e2ap_pdu_obj);
-  int ret_constr = asn_check_constraints(&asn_DEF_E2AP_PDU, (void *) e2ap_pdu_obj, errbuf, &errbuf_len);
+  int ret_constr = asn_check_constraints(&asn_DEF_E2N_E2AP_PDU, (void *) e2ap_pdu_obj, errbuf, &errbuf_len);
   if(ret_constr){
     error_string.assign(errbuf, errbuf_len);
     error_string = "Constraints failed for encoding subscription request. Reason = " + error_string;
     return false;
   }
+
+  //xer_fprint(stdout, &asn_DEF_E2N_E2AP_PDU, e2ap_pdu_obj);
   
-  asn_enc_rval_t retval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2AP_PDU, e2ap_pdu_obj, buf, *size);
+  asn_enc_rval_t retval = asn_encode_to_buffer(0, ATS_ALIGNED_BASIC_PER, &asn_DEF_E2N_E2AP_PDU, e2ap_pdu_obj, buf, *size);
     
   if(retval.encoded == -1){
     error_string.assign(strerror(errno));
-    error_string = "Error encoding Subscription Delete Request. Reason = " + error_string;
+    error_string = "Error encoding Subscription  Request. Reason = " + error_string;
     return false;
   }
   else {
     if(*size < retval.encoded){
       std::stringstream ss;
-      ss  <<"Error encoding Subscription Delete Request . Reason =  encoded pdu size " << retval.encoded << " exceeds buffer size " << *size << std::endl;
+      ss  <<"Error encoding Subscription  Request . Reason =  encoded pdu size " << retval.encoded << " exceeds buffer size " << *size << std::endl;
       error_string = ss.str();
       retval.encoded = -1;
       return false;
@@ -131,105 +139,93 @@ bool subscription_request::encode_e2ap_subscription(unsigned char *buf, size_t *
 }
 
 
-bool subscription_request::set_fields(InitiatingMessage_t *ref_initMsg, subscription_helper &helper){
+bool subscription_request::set_fields( E2N_InitiatingMessage_t * init_msg, subscription_helper &helper){
 
-  if (ref_initMsg == 0){
-    error_string = "Error : Invalid reference when setting fields for subscription request";
-    return false;
-  }
   
   int ie_index;
   int result = 0;
-  
-  ref_initMsg->procedureCode = ProcedureCode_id_ricSubscription;
-  ref_initMsg->criticality = Criticality_reject;
-  ref_initMsg->value.present = InitiatingMessage__value_PR_RICsubscriptionRequest;
 
-  RICsubscriptionRequest_t * subscription_request = &(ref_initMsg->value.choice.RICsubscriptionRequest);
+  if (init_msg == 0){
+    error_string = "Error. Invalid reference when getting fields from subscription request";
+    return false;
+  }
 
-  // Reset field count for protocolIEs
-  subscription_request->protocolIEs.list.count = 0;
+  E2N_RICsubscriptionRequest_t * ric_subscription = &(init_msg->value.choice.RICsubscriptionRequest);
+  ric_subscription->protocolIEs.list.count = 0;
   
   ie_index = 0;
-  RICsubscriptionRequest_IEs_t *ies_ricreq = &IE_array[ie_index];
-  ies_ricreq->criticality = Criticality_reject;
-  ies_ricreq->id = ProtocolIE_ID_id_RICrequestID;
-  ies_ricreq->value.present = RICsubscriptionRequest_IEs__value_PR_RICrequestID;
-  RICrequestID_t *ricrequest_ie = &ies_ricreq->value.choice.RICrequestID;
+  E2N_RICsubscriptionRequest_IEs_t *ies_ricreq = &IE_array[ie_index];
+  ies_ricreq->criticality = E2N_Criticality_reject;
+  ies_ricreq->id = E2N_ProtocolIE_ID_id_RICrequestID;
+  ies_ricreq->value.present = E2N_RICsubscriptionRequest_IEs__value_PR_RICrequestID;
+  E2N_RICrequestID_t *ricrequest_ie = &ies_ricreq->value.choice.RICrequestID;
   ricrequest_ie->ricRequestorID = helper.get_request_id();
   ricrequest_ie->ricRequestSequenceNumber = helper.get_req_seq();
-  result = ASN_SEQUENCE_ADD(&subscription_request->protocolIEs, ies_ricreq);
-  if (result == -1){
-     error_string = "Erorr : Unable to assign memory to add RIC request id to subscription request";
-    return false;
-  }
+  result = ASN_SEQUENCE_ADD(&(ric_subscription->protocolIEs), &IE_array[ie_index]);
+  assert(result == 0);
      
   ie_index = 1;
-  RICsubscriptionRequest_IEs_t *ies_ranfunc = &IE_array[ie_index];
-  ies_ranfunc->criticality = Criticality_reject;
-  ies_ranfunc->id = ProtocolIE_ID_id_RANfunctionID;
-  ies_ranfunc->value.present = RICsubscriptionRequest_IEs__value_PR_RANfunctionID;
-  RANfunctionID_t *ranfunction_ie = &ies_ranfunc->value.choice.RANfunctionID;
+  E2N_RICsubscriptionRequest_IEs_t *ies_ranfunc = &IE_array[ie_index];
+  ies_ranfunc->criticality = E2N_Criticality_reject;
+  ies_ranfunc->id = E2N_ProtocolIE_ID_id_RANfunctionID;
+  ies_ranfunc->value.present = E2N_RICsubscriptionRequest_IEs__value_PR_RANfunctionID;
+  E2N_RANfunctionID_t *ranfunction_ie = &ies_ranfunc->value.choice.RANfunctionID;
   *ranfunction_ie = helper.get_function_id();
-  ASN_SEQUENCE_ADD(&subscription_request->protocolIEs, ies_ranfunc);
-  if (result == -1){
-    error_string = "Erorr : Unable to assign memory to add RAN function id to subscription request";
-    return false;
-  }
+  result = ASN_SEQUENCE_ADD(&(ric_subscription->protocolIEs), &IE_array[ie_index]);
+  assert(result == 0);
 
 
   ie_index = 2;
-  RICsubscriptionRequest_IEs_t *ies_actid = &IE_array[ie_index];
-  ies_actid->criticality = Criticality_reject;
-  ies_actid->id = ProtocolIE_ID_id_RICsubscription;
-  ies_actid->value.present = RICsubscriptionRequest_IEs__value_PR_RICsubscription;
-  RICsubscription_t *ricsubscription_ie = &ies_actid->value.choice.RICsubscription;
+  E2N_RICsubscriptionRequest_IEs_t *ies_actid = &IE_array[ie_index];
+  ies_actid->criticality = E2N_Criticality_reject;
+  ies_actid->id = E2N_ProtocolIE_ID_id_RICsubscription;
+  ies_actid->value.present = E2N_RICsubscriptionRequest_IEs__value_PR_RICsubscription;
+  E2N_RICsubscription_t *ricsubscription_ie = &ies_actid->value.choice.RICsubscription;
 
   ricsubscription_ie->ricEventTriggerDefinition.buf = (uint8_t *) helper.get_event_def();
   ricsubscription_ie->ricEventTriggerDefinition.size = helper.get_event_def_size();
    
   std::vector<Action> * ref_action_array = helper.get_list();
-  
-  // do we need to reallocate ?
+  // do we need to resize  ?
+  // we don't care about contents, so just do a free/calloc
   if(action_array_size < ref_action_array->size()){
+    std::cout <<"re-allocating action array from " << action_array_size << " to " << 2 * ref_action_array->size() <<  std::endl;
+    
     action_array_size = 2 * ref_action_array->size();
-    RICaction_ToBeSetup_ItemIEs_t * new_ref = 0;
-    new_ref = (RICaction_ToBeSetup_ItemIEs_t *  )realloc(action_array, action_array_size);
-    assert(new_ref != 0);
-    action_array = new_ref;
+    free(action_array);
+    action_array = (E2N_RICaction_ToBeSetup_ItemIEs_t *)calloc(action_array_size, sizeof(E2N_RICaction_ToBeSetup_ItemIEs_t));
+    assert(action_array != 0);
   }
   
   // reset the list count on ricAction_ToBeSetup_List;
   ricsubscription_ie->ricAction_ToBeSetup_List.list.count = 0;
-    
+  
   for(int i = 0; i < ref_action_array->size(); i ++){
-    action_array[i].criticality = Criticality_ignore;
-    action_array[i].id = ProtocolIE_ID_id_RICaction_ToBeSetup_Item ;
-    action_array[i].value.present = RICaction_ToBeSetup_ItemIEs__value_PR_RICaction_ToBeSetup_Item;
+    action_array[i].criticality = E2N_Criticality_ignore;
+    action_array[i].id = E2N_ProtocolIE_ID_id_RICaction_ToBeSetup_Item ;
+    action_array[i].value.present = E2N_RICaction_ToBeSetup_ItemIEs__value_PR_RICaction_ToBeSetup_Item;
     action_array[i].value.choice.RICaction_ToBeSetup_Item.ricActionID = (*ref_action_array)[i].get_id();
     action_array[i].value.choice.RICaction_ToBeSetup_Item.ricActionType = (*ref_action_array)[i].get_type();
-
+    
     result = ASN_SEQUENCE_ADD(&ricsubscription_ie->ricAction_ToBeSetup_List, &(action_array[i]));
     if (result == -1){
       error_string = "Erorr : Unable to assign memory to add Action item to set up list";
       return false;
     }
     
-
   }
   
-  result = ASN_SEQUENCE_ADD(&subscription_request->protocolIEs, ies_actid);
-  if (result == -1){
-    error_string = "Erorr : Unable to assign memory to action item to be setup list  subscription request";
-    return false;
-  }
+  result = ASN_SEQUENCE_ADD(&(ric_subscription->protocolIEs), &IE_array[ie_index]);
+  assert(result == 0);
 
+
+    
   return true;
 };
 
 
 
-bool subscription_request:: get_fields(InitiatingMessage_t * init_msg,  subscription_helper & dout)
+bool subscription_request:: get_fields(E2N_InitiatingMessage_t * init_msg,  subscription_helper & dout)
 {
 
   if (init_msg == 0){
@@ -237,31 +233,31 @@ bool subscription_request:: get_fields(InitiatingMessage_t * init_msg,  subscrip
     return false;
   }
   
-  RICrequestID_t *requestid;
-  RANfunctionID_t * ranfunctionid;
-  RICsubscription_t * ricsubscription;
+  E2N_RICrequestID_t *requestid;
+  E2N_RANfunctionID_t * ranfunctionid;
+  E2N_RICsubscription_t * ricsubscription;
     
   for(int edx = 0; edx < init_msg->value.choice.RICsubscriptionRequest.protocolIEs.list.count; edx++) {
-    RICsubscriptionRequest_IEs_t *memb_ptr = init_msg->value.choice.RICsubscriptionRequest.protocolIEs.list.array[edx];
+    E2N_RICsubscriptionRequest_IEs_t *memb_ptr = init_msg->value.choice.RICsubscriptionRequest.protocolIEs.list.array[edx];
     
     switch(memb_ptr->id)
       {
-      case (ProtocolIE_ID_id_RICrequestID):
+      case (E2N_ProtocolIE_ID_id_RICrequestID):
 	requestid = &memb_ptr->value.choice.RICrequestID;
 	dout.set_request(requestid->ricRequestorID, requestid->ricRequestSequenceNumber);
 	break;
 	  
-      case (ProtocolIE_ID_id_RANfunctionID):
+      case (E2N_ProtocolIE_ID_id_RANfunctionID):
 	ranfunctionid = &memb_ptr->value.choice.RANfunctionID;
 	dout.set_function_id(*ranfunctionid);
 	break;
 	  
-      case (ProtocolIE_ID_id_RICsubscription):
+      case (E2N_ProtocolIE_ID_id_RICsubscription):
 	ricsubscription = &memb_ptr->value.choice.RICsubscription;
 	dout.set_event_def(ricsubscription->ricEventTriggerDefinition.buf, ricsubscription->ricEventTriggerDefinition.size);
 	  
 	for(int index = 0; index < ricsubscription->ricAction_ToBeSetup_List.list.count; index ++){
-	  RICaction_ToBeSetup_ItemIEs_t * item = (RICaction_ToBeSetup_ItemIEs_t *)ricsubscription->ricAction_ToBeSetup_List.list.array[index];
+	  E2N_RICaction_ToBeSetup_ItemIEs_t * item = (E2N_RICaction_ToBeSetup_ItemIEs_t *)ricsubscription->ricAction_ToBeSetup_List.list.array[index];
 	  dout.add_action(item->value.choice.RICaction_ToBeSetup_Item.ricActionID, item->value.choice.RICaction_ToBeSetup_Item.ricActionType);
 	};
 	  
@@ -270,7 +266,7 @@ bool subscription_request:: get_fields(InitiatingMessage_t * init_msg,  subscrip
       
   }
     
-  //asn_fprint(stdout, &asn_DEF_E2AP_PDU, e2pdu);
+  //asn_fprint(stdout, &asn_DEF_E2N_E2AP_PDU, e2pdu);
   return true;
 };
 

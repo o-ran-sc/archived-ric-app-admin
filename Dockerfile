@@ -2,7 +2,7 @@ ARG SCHEMA_PATH=schemas
 ARG STAGE_DIR=/tmp/ac-xapp
 
 #==================================================================================
-FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu16-c-go:1-u16.04-nng1.1.1 as ricbuild
+FROM nexus3.o-ran-sc.org:10004/bldr-ubuntu16-c-go@sha256:c53b2f70bfc47de5af0eb0c4264f894b2a13ca3c954befda0725191826dda201 as ricbuild
 
 # to override repo base, pass in repo argument when running docker build:
 # docker build --build-arg REPOBASE=http://abc.def.org . ....

@@ -22,7 +22,7 @@
 
 #include "adm-ctrl-xapp.hpp"
 
-bool report_mode_only = true;
+
 static int RunProg = 1;  // keep loop running
 
 // list of plugins 
@@ -31,21 +31,21 @@ plugin_list Plugins;
 std::map<int, Policy *> plugin_rmr_map;
 
 
-bool add_subscription(SubscriptionHandler & sub_handler, XaPP * xapp_ref, subscription_helper & he, subscription_response_helper he_resp, std::string & gNodeB){
+int add_subscription(subscription_handler & sub_handler, XaPP * xapp_ref, subscription_helper & he, subscription_response_helper he_resp, std::string & gNodeB){
   unsigned char node_buffer[32];
   std::copy(gNodeB.begin(), gNodeB.end(), node_buffer);
   node_buffer[gNodeB.length()] = '\0';
-  bool res = sub_handler.RequestSubscription(he, he_resp,  RIC_SUB_REQ, std::bind(static_cast<bool (XaPP::*)(int, int, void *, unsigned char const*)>( &XaPP::Send), xapp_ref, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, node_buffer));
+  int res = sub_handler.RequestSubscription(he, he_resp,  RIC_SUB_REQ, std::bind(static_cast<bool (XaPP::*)(int, int, void *, unsigned char const*)>( &XaPP::Send), xapp_ref, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, node_buffer));
   return res;
 };
 
 
-bool delete_subscription(SubscriptionHandler & sub_handler, XaPP * xapp_ref, subscription_helper & he, subscription_response_helper  he_resp, std::string & gNodeB){
+int delete_subscription(subscription_handler & sub_handler, XaPP * xapp_ref, subscription_helper & he, subscription_response_helper  he_resp, std::string & gNodeB){
   unsigned char node_buffer[32];
   std::copy(gNodeB.begin(), gNodeB.end(), node_buffer);
   node_buffer[gNodeB.length()] = '\0';
 
-  bool res = sub_handler.RequestSubscriptionDelete(he, he_resp, RIC_SUB_DEL_REQ, std::bind(static_cast<bool (XaPP::*)(int, int, void *, unsigned char const*)>( &XaPP::Send), xapp_ref, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, node_buffer));
+  int res = sub_handler.RequestSubscriptionDelete(he, he_resp, RIC_SUB_DEL_REQ, std::bind(static_cast<bool (XaPP::*)(int, int, void *, unsigned char const*)>( &XaPP::Send), xapp_ref, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, node_buffer));
   return res;
 };
 
@@ -144,13 +144,32 @@ int main(int argc, char *argv[]){
     mdclog_write(MDCLOG_WARN, "WARNING  : gNodeB not set for subscription. Subscription MAY FAIL");
   }
 
+
+  std::string operating_mode;
+  // How are we operating ? 
   if (my_config.operating_mode == "CONTROL"){
-    report_mode_only = false;
+    // Full closed loop : process E2AP indication,
+    // E2SM, X2AP and generate response
+    my_config.report_mode_only = false;
+    operating_mode = "CLOSED LOOP CONTROL";
+  }
+  else if (my_config.operating_mode == "E2AP_PROC_ONLY"){
+    // Debugging : processing only E2AP indication 
+    my_config.processing_level = ProcessingLevelTypes::E2AP_PROC_ONLY;
+    operating_mode = "E2AP PROCESSING ONLY";
+  }
+  else if (my_config.operating_mode == "E2SM_PROC_ONLY"){
+    // Debugging : processing only till E2SM indication header
+    my_config.processing_level = ProcessingLevelTypes::E2SM_PROC_ONLY;
+    operating_mode = "E2SM PROCESSING ONLY";
   }
   else{
-    report_mode_only = true;
+    // Passive : processing till X2AP but do not generate response
+    my_config.report_mode_only = true;
+    operating_mode = "REPORTING ONLY";
   }
-  
+
+  mdclog_write(MDCLOG_DEBUG, "Operating mode of Admission Control xAPP is %s\n", operating_mode.c_str());
   // Finished passing command line/environment arguments 
   //=============================================================
 
@@ -172,7 +191,7 @@ int main(int argc, char *argv[]){
 
   
    // Instantiate admission logic handler
-   Plugins.emplace_back(std::make_unique<admission>(my_config.a1_schema_file, my_config.sample_file, my_config.ves_schema_file,  1));
+  Plugins.emplace_back(std::make_unique<admission>(my_config.a1_schema_file, my_config.sample_file, my_config.ves_schema_file,  1, my_config.report_mode_only));
   
    // Add reference to plugin list . We add twice (once for set policy  and once for get policy  ids)
    // Plugin list is used by policy handler and metrics collector
@@ -184,7 +203,7 @@ int main(int argc, char *argv[]){
 
 
    // Instantiate subscription handler
-   SubscriptionHandler sub_handler;
+   subscription_handler sub_handler;
 
    // Instantiate message handlers for RMR
    // (one for each thread) and registrer
@@ -192,7 +211,7 @@ int main(int argc, char *argv[]){
    
    std::vector<std::unique_ptr<message_processor> > message_procs;
    for(int i = 0; i < my_config.num_threads; i++){
-     std::unique_ptr<message_processor> mp_handler = std::make_unique<message_processor> ();
+     std::unique_ptr<message_processor> mp_handler = std::make_unique<message_processor> (my_config.processing_level, my_config.report_mode_only);
      mp_handler.get()->register_subscription_handler(& sub_handler);
      mp_handler.get()->register_protector(dynamic_cast<admission *>(Plugins[0].get())->get_protector_instance(0));
      mp_handler.get()->register_policy_handler (& policy_handler);
@@ -218,7 +237,7 @@ int main(int argc, char *argv[]){
    int req_seq = 1;
    int function_id = 0;
    int action_id = 4;
-   int action_type = report_mode_only ? 0:1;
+   int action_type = my_config.report_mode_only ? 0:1;
    
    int message_type = 1;
    int procedure_code = 27;
@@ -267,25 +286,30 @@ int main(int argc, char *argv[]){
    //======================================================
   
    
-   // keep sending subscription request till successfull for all gnodebs ?
+   // keep sending subscription request till successfull for all gnodebs or exceed max attempts  ?
+   // or exceed max_iterations
    auto it = my_config.gNodeB_list.begin();
-   while(my_config.gNodeB_list.size() > 0 && RunProg){
+   int loop = 0;
+   int num_nodes = my_config.gNodeB_list.size();
+   
+   while((loop < num_nodes * my_config.max_sub_loops) && my_config.gNodeB_list.size() > 0 && RunProg){
      int attempt = 0;
-     res = false;
+     int subscr_result = -1;
       
-     while(!res){
+     while(1){
        mdclog_write(MDCLOG_INFO, "Sending subscription request for %s ... Attempt number = %d\n", (*it).c_str(), attempt);
-       res = add_subscription(sub_handler, my_xapp.get(),  sgnb_add_subscr_req, subscr_response, *it);
-       if (!res){
-	 sleep(5);
-       };
+       subscr_result = add_subscription(sub_handler, my_xapp.get(),  sgnb_add_subscr_req, subscr_response, *it);
+       if (subscr_result == SUBSCR_SUCCESS){
+	 break;
+       }
+       sleep(5);
        attempt ++;
        if (attempt > MAX_SUBSCRIPTION_ATTEMPTS){
 	 break;
        }
      }
      
-     if(res){
+     if(subscr_result == SUBSCR_SUCCESS){
        mdclog_write(MDCLOG_INFO, "Successfully subscribed for gNodeB %s", (*it).c_str());
        // remove node from list,
        // move to next gnobde
@@ -295,40 +319,25 @@ int main(int argc, char *argv[]){
      if (it == my_config.gNodeB_list.end()){
        it = my_config.gNodeB_list.begin();
      }
+
+     loop++;
      
    }
    
+   if (my_config.gNodeB_list.size() == 0){
+     std::cout <<"SUBSCRIPTION REQUEST :: Successfully subscribed to events for all gNodeBs " << std::endl;
+   }
+   else{
+     std::cerr <<"SUBSCRIPTION REQUEST :: Failed to subscribe for following gNodeBs" << std::endl;
+     for(const auto &e: my_config.gNodeB_list){
+       std::cerr <<"Failed to subscribe for gNodeB " << e << std::endl;
+     }
+   }
    
-   std::cout <<"SUBSCRIPTION REQUEST :: Successfully subscribed to events for all gNodeBs " << std::endl;
-
    //Register signal handler to stop 
    signal(SIGINT, EndProgram);
    signal(SIGTERM, EndProgram);
    
-
-   // Purely for testing purposes ....
-   // If in test mode, we wait an interval and then send delete subscription request for each gNodeB
-   if(my_config.test_mode){
-     std::cout <<"====================== " << std::endl;
-     std::cout <<"WE ARE IN TEST MODE. " << std::endl;
-     std::cout <<"====================== " << std::endl;
-     std::cout <<"WILL SEND SUBSCRIPTION DELETE REQUEST AFTER " << my_config.measurement_interval << " SECONDS " << std::endl;
-     sleep(my_config.measurement_interval); 
-     res = false;
-     // keep sending subscription delete request till successfull ? 
-     int attempt = 0;
-     while(!res){
-       mdclog_write(MDCLOG_INFO, "Sending subscription delete request for id = %d ... Attempt number = %d\n", sgnb_add_subscr_req.get_request_id(), attempt);
-       res = delete_subscription(sub_handler, my_xapp.get(),  sgnb_add_subscr_req, subscr_response, my_config.gNodeB_list[0]);
-       if (!res){
-	 sleep(5);
-       };
-       attempt ++;
-     }
-
-     std::cout <<"SUBSCRIPTION DELETE REQUEST :: Successfuly deleted subscription request " << request_id << std::endl;
-     
-   };
    
    //Wait for stop
    while(RunProg){

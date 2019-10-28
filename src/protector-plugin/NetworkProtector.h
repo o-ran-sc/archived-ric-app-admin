@@ -34,11 +34,13 @@
 #define unlikely(x) (x)
 #endif
 
+extern bool report_mode_only;
+
 class protector
 {
 public: 
   
-  protector( bool enforce, int windowSize_, int threshold_, double blockRate_);
+  protector( bool , int , int , double , bool rep=true);
 
   bool operator()(unsigned char *, size_t , unsigned char *, size_t *);
   
@@ -67,6 +69,7 @@ private:
   sgnb_addition_response sgnb_resp;
   
   std::string error_string;
+  bool report_mode_only;
 };
 
 #endif

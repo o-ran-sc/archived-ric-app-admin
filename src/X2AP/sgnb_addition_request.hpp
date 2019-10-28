@@ -33,14 +33,14 @@
 #include <sgnb_addition_helpers.hpp>
 
  
-#include <X2AP-PDU.h>
-#include <X2InitiatingMessage.h>
-#include <ProtocolIE-Field.h>
-#include <SgNBAdditionRequest.h>
-#include <E-RABs-ToBeAdded-SgNBAddReq-Item.h>
-#include <E-RABs-ToBeAdded-SgNBAddReq-Item-SgNBPDCPpresent.h>
-#include <GBR-QosInformation.h>
-#include <E-RABs-ToBeAdded-SgNBAddReq-Item-SgNBPDCPnotpresent.h>
+#include <X2N_X2AP-PDU.h>
+#include <X2N_InitiatingMessage.h>
+#include <X2N_ProtocolIE-Field.h>
+#include <X2N_SgNBAdditionRequest.h>
+#include <X2N_E-RABs-ToBeAdded-SgNBAddReq-Item.h>
+#include <X2N_E-RABs-ToBeAdded-SgNBAddReq-Item-SgNBPDCPpresent.h>
+#include <X2N_GBR-QosInformation.h>
+#include <X2N_E-RABs-ToBeAdded-SgNBAddReq-Item-SgNBPDCPnotpresent.h>
 
 
 #define NUM_SGNB_ADDITION_REQUEST_IES 8
@@ -52,21 +52,21 @@ public:
   ~sgnb_addition_request(void);
 
   bool encode_sgnb_addition_request(unsigned char *, size_t *, sgnb_addition_helper &);
-  bool set_fields(X2InitiatingMessage_t *, sgnb_addition_helper &);
-  bool get_fields(X2InitiatingMessage_t * ,sgnb_addition_helper &);
+  bool set_fields( sgnb_addition_helper &);
+  bool get_fields(X2N_InitiatingMessage_t * ,sgnb_addition_helper &);
   std::string get_error(void) const {return error_string; };
   
 private:
 
-  X2AP_PDU_t * x2ap_pdu_obj;
-  X2InitiatingMessage_t * initMsg;
-  SgNBAdditionRequest_IEs_t * IE_array;
+  X2N_X2AP_PDU_t * x2ap_pdu_obj;
+  X2N_InitiatingMessage_t * initMsg;
+  X2N_SgNBAdditionRequest_IEs_t * IE_array;
 
-  E_RABs_ToBeAdded_SgNBAddReq_ItemIEs_t * erab_array;
+  X2N_E_RABs_ToBeAdded_SgNBAddReq_ItemIEs_t * erab_array;
   size_t erab_array_size;
   
-  E_RABs_ToBeAdded_SgNBAddReq_Item_SgNBPDCPpresent_t * erab_sgnb_present_array;
-  E_RABs_ToBeAdded_SgNBAddReq_Item_SgNBPDCPnotpresent_t * erab_sgnb_notpresent_array;
+  X2N_E_RABs_ToBeAdded_SgNBAddReq_Item_SgNBPDCPpresent_t * erab_sgnb_present_array;
+  X2N_E_RABs_ToBeAdded_SgNBAddReq_Item_SgNBPDCPnotpresent_t * erab_sgnb_notpresent_array;
   size_t erab_sgnb_present_array_size ;
   size_t erab_sgnb_notpresent_array_size;
 

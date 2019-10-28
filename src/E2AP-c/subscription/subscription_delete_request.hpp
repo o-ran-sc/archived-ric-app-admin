@@ -27,10 +27,10 @@
 #include <sstream>
 #include <mdclog/mdclog.h>
 #include <asn_application.h>
-#include <E2AP-PDU.h>
-#include <InitiatingMessage.h>
-#include <RICsubscriptionDeleteRequest.h>
-#include <ProtocolIE-Field.h>
+#include <E2N_E2AP-PDU.h>
+#include <E2N_InitiatingMessage.h>
+#include <E2N_RICsubscriptionDeleteRequest.h>
+#include <E2N_ProtocolIE-Field.h>
 
 #define NUM_SUBSCRIPTION_DELETE_IES 2
 
@@ -41,8 +41,8 @@ public:
   ~subscription_delete(void);
   
   bool encode_e2ap_subscription(unsigned char *, size_t *,  subscription_helper &);
-  bool set_fields(InitiatingMessage_t *, subscription_helper &);
-  bool get_fields(InitiatingMessage_t *, subscription_helper &);
+  bool set_fields(subscription_helper &);
+  bool get_fields(E2N_InitiatingMessage_t *, subscription_helper &);
     
   std::string get_error(void) const {
     return error_string ;
@@ -50,10 +50,10 @@ public:
     
 private:
     
-  InitiatingMessage_t *initMsg;
-  E2AP_PDU_t * e2ap_pdu_obj;
+  E2N_InitiatingMessage_t *initMsg;
+  E2N_E2AP_PDU_t * e2ap_pdu_obj;
 
-  RICsubscriptionDeleteRequest_IEs_t * IE_array;
+  E2N_RICsubscriptionDeleteRequest_IEs_t * IE_array;
 
   
   char errbuf[128];

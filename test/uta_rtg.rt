@@ -1,0 +1,36 @@
+#==================================================================================
+
+#        Copyright (c) 2018-2019 AT&T Intellectual Property.
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
+newrt|start
+rte|0|localhost:4999
+rte|102|localhost:4999
+rte|101|localhost:4998
+rte|2|localhost:38000
+rte|10002|localhost:4560
+rte|10005|localhost:4560
+rte|10003|localhost:38000
+rte|12010|localhost:38000
+rte|12020|localhost:38000
+rte|12011|localhost:4560
+rte|12012|localhost:4560
+rte|12021|localhost:4560
+rte|12022|localhost:4560
+rte|12040|localhost:38000
+rte|12050|localhost:4560
+rte|20000|localhost:4560
+rte|20002|localhost:4560
+rte|1111|localhost:38000
+newrt|end
