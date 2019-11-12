@@ -75,7 +75,7 @@ will be provided by the *Route Manager*. For local testing, static routes can be
 
    - The xAPP docker run time **must** be configured with a json configuration file appropriate to the test environment which injects various environment variables including the RMR routes   (an example is provided under init/config-file.json).
 
-   - Once such a  file is available (say under directory /home/user/test-config),  the docker image can be invoked as *docker run --net host -it --rm -v "/home/user/test-config:/opt/ric/config" --name  "AC-xAPP" <image>*.  See REAMDE.md under the init directory for more details.
+   - Once such a  file is available (say under directory /home/user/test-config),  the docker image can be invoked as *docker run --net host -it --rm -v "/home/user/test-config:/opt/ric/config" --name  "AC-xAPP" <image>*.  See README.md under the init directory for more details.
 
 
 3. **Invoking docker xAPP container in RIC Kubernetes environment** :
@@ -109,12 +109,12 @@ After that, the unit tests can be compiled and run by executing the following co
 - ./run_tests.sh
 - If gcovr is installed (https://github.com/gcovr/gcovr) the script  will  also generates a coverage report (as ../coverage_report.html)
 
-In order to run integration tests, the AC-xAPP requires *three* components : an *E2 Termination point* to send and receive RAN messages, an *A1 mediator* to send policy updatesd and a *VES collector* to receive metrics. The *test/*
+In order to run integration tests, the AC-xAPP requires *three* components : an *E2 Termination point* to send and receive RAN messages, an *A1 mediator* to send policy updates and a *VES collector* to receive metrics. The *test/*
 directory contains mock-ups for these three components which can be build and executed from the *test/* directory as follows  :
 
 1.  **E2 Termination** :  The E2 termination is responsible for forwarding  messages to and fro between the RAN and RIC. A mock-up of the E2 termination is provided in *test/* that
 
-    - listens and responds to E2AP subscribption requests.
+    - listens and responds to E2AP subscription requests.
     - upon receiving an E2AP subscription request, starts sending E2AP Indication messages that contain the X2AP SgNB Addition Request Message.
     - monitors E2AP control messages from the AC xAPP.
       

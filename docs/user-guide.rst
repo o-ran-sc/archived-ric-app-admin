@@ -13,13 +13,13 @@ This is the user guide of AC xAPP, describing its various features and how to co
    :local:
 
 ..  a user guide should be how to use the component or system; it should not be a requirements document
-..  delete this content after edittng it
+..  delete this content after editing it
 
 
 Description
 -----------
-.. Describe the target users of the projcet, for example, modeler/data scientist, ORAN-OSC platform admin, marketplace user, design studio end user, etc
-.. Descirbe how the target users can get use of a O-RAN SC component.
+.. Describe the target users of the project, for example, modeler/data scientist, ORAN-OSC platform admin, marketplace user, design studio end user, etc
+.. Describe how the target users can get use of a O-RAN SC component.
 .. If the guide contains sections on third-party tools, is it clearly stated why the O-RAN-OSC platform is using those tools? Are there instructions on how to install and configure each tool/toolset?
 
 The AC xAPP provides rate control of SgNB Addition Requests via a standard sliding window control algorithm which is configurable at run-time. Please see :ref:`Installation Guide` for instructions on compiling and executing the AC xAPP. This document explains the various configurable parameters of the AC xAPP executable, policies and metrics.
@@ -33,7 +33,8 @@ Run Time options
 ----------------
 The AC xAPP takes the following parameters (either on the command line) or as environment variables on invocation (see *src/run_xapp.sh* for an example of providing arguments on command line and *init/config-file.json* for environment variables)  :
 
-1. List of comma separated gNodeBs to send subscription requests to.
+1. List of comma separated gNodeBs to send subscription requests to. Can be specified with :
+   
    - Use *-g or --gNodeB* on command line.
    - Set the "GNODEB" environment variable
 
@@ -57,7 +58,7 @@ The AC xAPP takes the following parameters (either on the command line) or as en
    - *-v* on command line.
    - "VES_SCHEMA_FILE" environment variable.
 
-4. Set of sample JSON payloads for policy and metrics that the AC xAPP uses as templates to generate payloads. Values in the template payload are modified/retreived rather than construct the entire payload from scratch. The JSON file
+4. Set of sample JSON payloads for policy and metrics that the AC xAPP uses as templates to generate payloads. Values in the template payload are modified/retrieved rather than construct the entire payload from scratch. The JSON file
    containing the payloads can be specified with :
    - *-s* on command line.
    - "SAMPLE_FILE" environment variable.

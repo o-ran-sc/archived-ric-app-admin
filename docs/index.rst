@@ -15,8 +15,6 @@ Welcome to O-RAN SC Admission Control xAPP Documentation
    installation-guide.rst
    user-guide.rst
 
-
-
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`

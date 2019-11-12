@@ -62,12 +62,12 @@ Components
 
 - *src/* contains the main source code. Under that directory :
   
-  + *xapp_utils.hpp, xapp_utls.cc* is generic multi-threaded framework for receiving and sending RMR events.
+  + *xapp_utils.hpp, xapp_utils.cc* is generic multi-threaded framework for receiving and sending RMR events.
   + *E2AP-c/subscription/* contains generic classes to send/process ASN1 subscription requests, responses, deletes and failures as well as thread-safe subscription handler for managing the subscription process.
   + *E2AP-c/* contains generic classes for generating/processing ASN1  E2AP Indication and Control messages.
   + *E2SM/* contains generic classes for handling generating/processing ASN1 E2SM service model (e.g event trigger etc).
   + *curl/* contains a simple *libcurl* based class for POSTing JSON messages.
-  + *json/* contains a generic class for simple JSON key retreival and modification (based on rapidjson)
+  + *json/* contains a generic class for simple JSON key retrieval and modification (based on rapidjson)
   + *protector-plugin/* contains code specific to the admission control algorithm and interfaces for setting/getting policy.
 
 - *test/* contains unit tests showing how to use various components as well as mock-ups for integration testing.
