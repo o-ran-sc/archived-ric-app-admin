@@ -129,7 +129,7 @@ admission::admission (std::string policy_schema_file, std::string samples_file, 
 };
 
 void admission::instantiate_protector_plugin(bool mode){
-  _plugin_instances.emplace_back(bool(current_config["enforce"]), current_config["window_length"], current_config["blocking_rate"], current_config["trigger_threshold"], mode);
+  _plugin_instances.emplace_back(bool(current_config["enforce"]), current_config["window_length"], current_config["trigger_threshold"], current_config["blocking_rate"], mode);
 }
 
 admission::~admission(void){

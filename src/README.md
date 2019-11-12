@@ -162,4 +162,4 @@ Other Components
 
 	- get_config.cc  : processing command line and environment variables at start up.
 
-	- message_processor_class.cc  : The RMR message processing engine. It listens for messages on RMR and invokes appropriate handler (e.g subscriptions, E2AP, Policy).  It also periodically posts processing latency metrics to stdout 
+	- message_processor_class.cc  : The RMR message processing engine. It listens for messages on RMR and invokes appropriate handler (e.g subscriptions, E2AP, Policy). 

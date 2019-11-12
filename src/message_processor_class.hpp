@@ -111,16 +111,6 @@ private:
   bool report_mode_only; // suppress e2ap control
   size_t _buffer_size; // for storing encoding
 
-  // these two parameters are used to report average processing latency.
-  // processing latency is accumalated over every num_proc_packets
-  // and both values are reported out on std log. After each report
-  // counters are reset
-
-  size_t _reporting_interval; // number of packets in a measurement interval
-  size_t num_proc_packets;
-  double processing_duration; // for storing time to process
-  double processing_dev; // for storing standard deviation
-  double max_proc_duration ;
 };
 
 

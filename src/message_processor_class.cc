@@ -30,11 +30,6 @@ message_processor::message_processor(int mode, bool report_mode, size_t buffer_l
   scratch_buffer = 0;
   scratch_buffer = (unsigned char *)calloc(_buffer_size, sizeof(unsigned char));
   assert(scratch_buffer != 0);
-  _reporting_interval = reporting_interval;
-  num_proc_packets = 0;
-  processing_duration = 0;
-  processing_dev = 0;
-  max_proc_duration = 0;
 
 };
 
@@ -80,8 +75,6 @@ bool message_processor::operator()(rmr_mbuf_t *message){
     return false;
   }
   
-  // start measurement 
-  auto start = std::chrono::high_resolution_clock::now();
   
   // main message processing code
   switch(message->mtype){
@@ -303,35 +296,6 @@ bool message_processor::operator()(rmr_mbuf_t *message){
 
   };
 
-  auto end = std::chrono::high_resolution_clock::now();
-  // Ad hoc metric reporting for now ...
-  // every reporting interval, prints to stdou
-  // 1, reporting interval (# of packets)
-  // 2. average  processing time (in micro seconds) across each packet
-  // 3. standard deviation (micro seconds ^2) a
-  // 4. maximum processing time (in micro seconds)
-  
-  if(num_proc_packets == _reporting_interval){
-    auto epoch = std::chrono::time_point_cast<std::chrono::seconds>(std::chrono::system_clock::now()).time_since_epoch();
-    double avg_latency =  processing_duration/num_proc_packets;
-    double std_dev_latency = processing_dev/num_proc_packets - avg_latency * avg_latency;
-    std::cout << "Processing Metrics : " << epoch.count() << "," << num_proc_packets << "," << avg_latency << "," << std_dev_latency << "," << max_proc_duration << std::endl;  
-    processing_duration = 0;
-    processing_dev = 0;
-    max_proc_duration = 0;
-    num_proc_packets = 0;
-  }
-
-  double  elapsed = std::chrono::duration<double, std::micro>(end - start).count();
-  if(elapsed > max_proc_duration){
-    max_proc_duration = elapsed;
-  }
-  
-  processing_duration += elapsed;
-  processing_dev += elapsed * elapsed;
-  num_proc_packets ++;
-
-  
   if(send_msg){
     return true;
   }
