@@ -5,5 +5,5 @@ linkcheck_ignore = [
     'https://gerrit.o-ran-sc.org.*'
 ]
 extensions = ['sphinx.ext.autosectionlabel']
-intersphinx_mapping = {}
-intersphinx_mapping['ric-app-admin'] = ('https://o-ran-sc-doc.readthedocs.io/projects/o-ran-sc-ric-app-admin/en/%s' % 'latest')
+#intersphinx_mapping = {}
+#intersphinx_mapping['ric-app-admin'] = ('https://o-ran-sc-doc.readthedocs.io/projects/o-ran-sc-ric-app-admin/en/%s' % 'latest')

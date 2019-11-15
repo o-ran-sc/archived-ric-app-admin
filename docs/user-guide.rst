@@ -60,6 +60,7 @@ The AC xAPP takes the following parameters (either on the command line) or as en
 
 4. Set of sample JSON payloads for policy and metrics that the AC xAPP uses as templates to generate payloads. Values in the template payload are modified/retrieved rather than construct the entire payload from scratch. The JSON file
    containing the payloads can be specified with :
+   
    - *-s* on command line.
    - "SAMPLE_FILE" environment variable.
 

@@ -1,0 +1,5 @@
+[gerrit]
+host=gerrit.o-ran-sc.org
+project=ric-app/admin
+port=29418
+defaultbranch=master
