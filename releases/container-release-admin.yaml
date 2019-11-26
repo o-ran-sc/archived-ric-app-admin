@@ -1,0 +1,10 @@
+---
+distribution_type: container
+container_release_tag: 1.0.1
+container_pull_registry: nexus3.o-ran-sc.org:10004
+container_push_registry: nexus3.o-ran-sc.org:10002
+project: ric-app/admin
+ref: 4d4cf1d5d1387e68dc3c22b14b6fbffe306a3b43
+containers:
+    - name: ric-app-admin
+      version: 1.0.0
