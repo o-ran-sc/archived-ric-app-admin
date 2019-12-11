@@ -20,7 +20,10 @@
 #pragma once
 #ifndef POLICY_BASE
 #define POLICY_BASE
-#include <json_handler.hpp>
+
+#include <iostream>
+#include <vector>
+
 // Base abstract Class that provides interface to  manage plugins.
 //  Interface for following actions
 // -- configure policy
@@ -37,12 +40,13 @@ class Policy
 public:
   virtual bool setPolicy(const char *, int, std::string &) = 0;
   virtual bool getPolicy(const char *, int , std::string & ) = 0;
-  virtual int getMetrics(std::string  & ) = 0;
+  virtual int getMetrics(std::vector<std::string>  & ) = 0;
   virtual std::string getName(void) = 0;
+  virtual std::string  get_error(void) const = 0;
   virtual ~Policy(void) = 0;
   
-  std::string  getError(void) const;
-  void  setError(std::string &);
+
+
   
   
   

@@ -1,19 +1,3 @@
-#==================================================================================
-#        Copyright (c) 2018-2019 AT&T Intellectual Property.
-#
-#   Licensed under the Apache License, Version 2.0 (the "License");
-#   you may not use this file except in compliance with the License.
-#   You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-#   Unless required by applicable law or agreed to in writing, software
-#   distributed under the License is distributed on an "AS IS" BASIS,
-#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#   See the License for the specific language governing permissions and
-#   limitations under the License.
-#==================================================================================
-
 This directory contains various unit tests as well as mock-ups for integration testing.
 
 Several unit test cases are provided to test and illustrate usage of various components of the AC xAPP. The unit tests use the CATCH framework(https://github.com/catchorg/Catch2).  It is a header only framework which can be installed simply by retreiving the header and placing it in the search path. To install : 
@@ -44,8 +28,3 @@ Pre-requisities for running the mock ves collector are :
 2. cherrypy module (pip install cherrypy)
 
 The mock ves collector can be simply invoked as python ./mock_ves_collector.py
-
-
-3. A mock A1 mediator : The mock up a1 mediator executable sends various JSON (valid/invalid) payloads in sequence to illustrate the behaviour and response of the AC xAPP. It can be compiled  as 'make mock-a1-server'
-To execute the mock-a1-server,  it requires as argument a port to listen and send on (can be any port that does not conflict with others). The A1 mediator uses rts send/receive and hence bypasses the routing table. 
-./mock-a1-server -p <port number> 

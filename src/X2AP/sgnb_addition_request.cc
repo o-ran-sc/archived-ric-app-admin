@@ -479,7 +479,7 @@ bool sgnb_addition_request::get_fields(X2N_InitiatingMessage_t * init_msg, sgnb_
       break;
       
     case (X2N_ProtocolIE_ID_id_SubscriberProfileIDforRFP):
-      //sgnb->subscriberprofileidforrfp = memb_ptr->value.choice.SubscriberProfileIDforRFP;
+      dout.subscriber_profile_id = memb_ptr->value.choice.SubscriberProfileIDforRFP;
       break;
       
     case (X2N_ProtocolIE_ID_id_MeNBCell_ID):

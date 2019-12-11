@@ -43,6 +43,7 @@
 #include <fstream>
 #include <csignal>
 #include <chrono>
+#include <fstream>
 #include <xapp_utils.hpp>
 #include <getopt.h>
 #include <rmr/RIC_message_types.h>
@@ -59,7 +60,7 @@
 #include <sgnb_addition_request.hpp>
 #include <sgnb_addition_response.hpp>
 
-#define X2_SGNB_ADDITION_REQUEST "test-data/X2AP-PDU-SgNBAdditionRequest.per"
+
 
 
 unsigned long int num_indications = 0;
@@ -73,7 +74,8 @@ bool RunProgram = true;
 bool subscription_active = false;
 int action_type = E2N_RICindicationType::E2N_RICindicationType_report;
 
-
+// PRE-ENCODED X2AP SGNB ADDITION REQUESTS
+static const std::vector<std::string>  x2ap_files = {"test-data/X2AP-PDU-SgNBAdditionRequest_SubId_10.per", "test-data/X2AP-PDU-SgNBAdditionRequest_SubId_23.per", "test-data/X2AP-PDU-SgNBAdditionRequest_SubId_29.per", "test-data/X2AP-PDU-SgNBAdditionRequest_SubId_180.per", "test-data/X2AP-PDU-SgNBAdditionRequest_SubId_210.per"};
 
 void usage(char *command){
     std::cout <<"Usage : " << command << " ";
@@ -404,8 +406,8 @@ int main(int argc, char *argv[]){
    }
    init_logger(name, static_cast<mdclog_severity_t>(log_level));
 
-   XaPP my_xapp = XaPP(name, port, 16384, 1);
-   my_xapp.Start(Message_Handler);
+   XaPP my_xapp = XaPP(name, port, 16384);
+   my_xapp.StartThread(Message_Handler);
 
    
    
@@ -430,19 +432,30 @@ int main(int argc, char *argv[]){
      exit(-1);
    }
 
-   //====== x2ap sgnb addition request created by us
-   unsigned char x2ap_buf[1024];
-   size_t x2ap_buf_size = 1024;
-   pfile = fopen(X2_SGNB_ADDITION_REQUEST, "r");
-   if(pfile == NULL){
-     std::cerr <<"Error ! Could not find test per file " << X2_SGNB_ADDITION_REQUEST << std::endl;
-     exit(-1);
+   //====== load the various x2ap requests 
+   unsigned char ** x2ap_bufs = (unsigned char **)calloc(x2ap_files.size(), sizeof(unsigned char *));
+   size_t * x2ap_buf_sizes = (size_t *)calloc(x2ap_files.size(), sizeof(size_t));
+
+   assert(x2ap_bufs != 0);
+   assert(x2ap_buf_sizes != 0);
+   
+   for(int i = 0; i < x2ap_files.size(); i++){
+     std::ifstream in(x2ap_files[i], std::ifstream::ate | std::ifstream::binary);
+     x2ap_buf_sizes[i] = in.tellg();
+     std::cout <<"Assigned " << x2ap_buf_sizes[i] << " bytes of memory for file " << x2ap_files[i] << std::endl;
+     x2ap_bufs[i] = (unsigned char *)calloc(x2ap_buf_sizes[i], sizeof(unsigned char));
+     assert(x2ap_bufs[i] != 0);
+     
+     pfile = fopen(x2ap_files[i].c_str(), "r");
+     if(pfile == NULL){
+       std::cerr <<"Error ! Could not find test per file " << x2ap_files[i] << std::endl;
+       exit(-1);
+     }
+     
+     fread((char *)x2ap_bufs[i], sizeof(char), x2ap_buf_sizes[i], pfile);
+     fclose(pfile);
    }
    
-   x2ap_buf_size = fread((char *)x2ap_buf, sizeof(char), 1024, pfile);
-   fclose(pfile);
-
-  
    //==== e2ap indication for generated x2ap pdus
    ric_indication_helper dinput ;   
    dinput.action_id = 100;
@@ -458,21 +471,11 @@ int main(int argc, char *argv[]){
    unsigned char data[data_size];
    
    ric_indication indication_pdu;
+   
 
-
-   // prepare packet to send. we send
-   // same packet every time for now
    dinput.indication_header = buf_header;
    dinput.indication_header_size = buf_header_size;
-   dinput.indication_msg = x2ap_buf;
-   dinput.indication_msg_size = x2ap_buf_size;
-   dinput.indication_type = 1; // for now always ask for control back
-   res = indication_pdu.encode_e2ap_indication(&data[0], &data_size, dinput);
-   if (!res){
-     std::cout <<"Error encoding E2AP Indication PDU. Reason = " << indication_pdu.get_error().c_str() <<  std::endl;
-     exit(-1);
-   }
-       
+    
 
    //Register signal handler to stop 
    signal(SIGINT, EndProgram);
@@ -490,12 +493,25 @@ int main(int argc, char *argv[]){
    auto start_time = std::chrono::steady_clock::now();
    int count = 0;
 
-
+   int packet_index = 0;
    while(RunProgram){
 
      if ( subscription_active && rate > 0 ){
        my_xapp.Send(RIC_INDICATION, data_size, data);
        num_indications ++;
+     
+
+       // choose packet to encode
+       dinput.indication_msg = x2ap_bufs[packet_index];
+       dinput.indication_msg_size = x2ap_buf_sizes[packet_index];
+       dinput.indication_type = 1; // for now always ask for control back
+       res = indication_pdu.encode_e2ap_indication(&data[0], &data_size, dinput);
+       if (!res){
+	 std::cout <<"Error encoding E2AP Indication PDU. Reason = " << indication_pdu.get_error().c_str() <<  std::endl;
+	 exit(-1);
+       }
+       packet_index ++;
+       packet_index = packet_index % x2ap_files.size();
      }
      
      std::this_thread::sleep_for(std::chrono::milliseconds(interval));

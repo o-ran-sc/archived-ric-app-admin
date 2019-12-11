@@ -23,7 +23,7 @@
 
 int verbose_flag = 0;
 
-message_processor::message_processor(int mode, bool report_mode, size_t buffer_length, size_t reporting_interval):  _ref_sub_handler(NULL), _ref_protector(NULL), _ref_policy_handler(NULL), _num_messages(0), current_index (0), num_indications(0), num_err_indications(0){
+message_processor::message_processor(int mode, bool report_mode, size_t buffer_length):  _ref_sub_handler(NULL), _ref_protector(NULL), _ref_policy_handler(NULL), _num_messages(0), current_index (0), num_indications(0), num_err_indications(0){
   processing_level = mode;
   report_mode_only = report_mode;
   _buffer_size = buffer_length;
@@ -75,6 +75,8 @@ bool message_processor::operator()(rmr_mbuf_t *message){
     return false;
   }
   
+  // start measurement 
+  auto start = std::chrono::high_resolution_clock::now();
   
   // main message processing code
   switch(message->mtype){
@@ -245,8 +247,11 @@ bool message_processor::operator()(rmr_mbuf_t *message){
   case (RIC_SUB_FAILURE):
   case ( RIC_SUB_DEL_FAILURE ):
     if (_ref_sub_handler != NULL){
+      // extract meid ..
+      unsigned char meid[32];
+      rmr_get_meid(message, meid);
       mdclog_write(MDCLOG_INFO, "Received subscription message of type = %d", message->mtype);
-      _ref_sub_handler->Response(message->mtype, message->payload, message->len);
+      _ref_sub_handler->Response(message->mtype, message->payload, message->len, (const char *)meid);
     }
     else{
       state = MISSING_HANDLER_ERROR;
@@ -256,16 +261,16 @@ bool message_processor::operator()(rmr_mbuf_t *message){
     break;
     
     
-  case DC_ADM_INT_CONTROL:
+  case A1_POLICY_REQ:
     {
       if(_ref_policy_handler != NULL){
 	// Need to apply config. Since config may need to be
 	// applied across all threads, we do a callback to the parent thread.
 	// wait for config to be applied and then send response
-	_ref_policy_handler(DC_ADM_INT_CONTROL, (const char *) message->payload, message->len, response, true);
+	_ref_policy_handler(A1_POLICY_REQ, (const char *) message->payload, message->len, response, true);
 	std::memcpy( (char *) message->payload, response.c_str(),  response.length());
 	message->len = response.length();
-	message->mtype = DC_ADM_INT_CONTROL_ACK;
+	message->mtype = A1_POLICY_RESP;
 	send_msg = true;
       }
       else{
@@ -275,21 +280,6 @@ bool message_processor::operator()(rmr_mbuf_t *message){
     }
     break;
 
-  case DC_ADM_GET_POLICY:
-    {
-      if(_ref_policy_handler != NULL){
-	_ref_policy_handler(DC_ADM_GET_POLICY,  (const char *) message->payload, message->len, response, false);
-	std::memcpy((char *)message->payload, response.c_str(), response.length());
-	message->len = response.length();
-	message->mtype = DC_ADM_GET_POLICY_ACK;
-	send_msg = true;
-      }
-      else{
-	state = MISSING_HANDLER_ERROR;
-	mdclog_write(MDCLOG_ERR, "Error :: %s, %d :: Policy handler not assigned in message processor !", __FILE__, __LINE__);
-      }
-    }
-    break;
     
   default:
     mdclog_write(MDCLOG_ERR, "Error :: Unknown message type %d received from RMR", message->mtype);

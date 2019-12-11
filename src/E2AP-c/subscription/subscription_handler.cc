@@ -24,45 +24,6 @@
 #include <subscription_handler.hpp>
 #include <errno.h>
 
-subscription_handler::subscription_handler(void){
-
-  init();
-  _time_out =  std::chrono::seconds(5);
-  _num_retries = 2;
-
-  // bool res;
-  // unsigned char buffer[128];
-  // size_t buf_len = 128;
-  
-  // E2N_E2AP_PDU_t e2ap_pdu;
-  // subscription_request e2ap_sub_req;
-
-  // int request_id = 2;
-  // int req_seq = 1;
-  // int function_id = 0;
-  // int action_id = 0;
-  // int action_type = 0;
-  // int message_type = 1;
-  
-  // subscription_helper sgnb_add_subscr_req;
-  
-  // //sgnb_add_subscr_req.clear();
-  // sgnb_add_subscr_req.set_request(request_id, req_seq);
-  // sgnb_add_subscr_req.set_function_id(function_id);
-  // sgnb_add_subscr_req.add_action(action_id, action_type);
-  // std::string test = "This is a test";
-  // sgnb_add_subscr_req.set_event_def(test.c_str(), test.length());
-  // std::cout <<"Constructor ........" << std::endl;
-  // // generate the request pdu
-  // res = e2ap_sub_req.encode_e2ap_subscription(&buffer[0], &buf_len, &e2ap_pdu, sgnb_add_subscr_req);
-  // if(! res){
-  //   mdclog_write(MDCLOG_ERR, "%s, %d: Error encoding subscription pdu. Reason = ", __FILE__, __LINE__);
-   
-  // }
-  // std::cout <<"Encoded subscription request pdu " << std::endl;
- 
- 
-}
 
 subscription_handler::subscription_handler(unsigned int timeout_seconds, unsigned int num_tries):_time_out(std::chrono::seconds(timeout_seconds)), _num_retries(num_tries){
   init();   
@@ -102,13 +63,8 @@ void subscription_handler::set_num_retries(unsigned int num_tries){
 };
 
 
-unsigned int subscription_handler::get_next_id(void){
-  std::lock_guard<std::mutex> lock(*(_data_lock).get());
-  unique_request_id ++;
-  return unique_request_id;
-}
 
-bool subscription_handler::add_request_entry(int id, int status){
+bool subscription_handler::add_request_entry(subscription_identifier id, int status){
 
   // add entry in hash table if it does not exist
   auto search = requests_table.find(id);
@@ -121,10 +77,9 @@ bool subscription_handler::add_request_entry(int id, int status){
 
 };
 
-bool subscription_handler::set_request_status(int id, int status){
+bool subscription_handler::set_request_status(subscription_identifier id, int status){
   
   // change status of a request only if it exists.
-
   auto search = requests_table.find(id);
   if(search != requests_table.end()){
     requests_table[id] = status;
@@ -136,7 +91,7 @@ bool subscription_handler::set_request_status(int id, int status){
 };
 
 
-bool subscription_handler::delete_request_entry(int id){
+bool subscription_handler::delete_request_entry(subscription_identifier id){
 
   auto search = requests_table.find(id);
   if (search != requests_table.end()){
@@ -147,7 +102,7 @@ bool subscription_handler::delete_request_entry(int id){
   return false;
 };
   
-bool subscription_handler::add_subscription_entry(int id, subscription_response_helper &he){
+bool subscription_handler::add_subscription_entry(subscription_identifier id, subscription_response_helper &he){
 
   auto search = subscription_responses.find(id);
   if (search == subscription_responses.end()){
@@ -159,7 +114,7 @@ bool subscription_handler::add_subscription_entry(int id, subscription_response_
 }
 
 
-bool subscription_handler::delete_subscription_entry(int id){
+bool subscription_handler::delete_subscription_entry(subscription_identifier id){
 
   auto search = subscription_responses.find(id);
   if(search == subscription_responses.end()){
@@ -172,7 +127,7 @@ bool subscription_handler::delete_subscription_entry(int id){
   
 }
 
-subscription_response_helper *  const subscription_handler::get_subscription(int id){
+subscription_response_helper *  const subscription_handler::get_subscription(subscription_identifier id){
   auto search = subscription_responses.find(id);
   if(search == subscription_responses.end()){
     return NULL;
@@ -184,10 +139,10 @@ subscription_response_helper *  const subscription_handler::get_subscription(int
 
 
 // Handles responses from RMR
-void subscription_handler::Response(int message_type, unsigned char *payload, int payload_length){
+void subscription_handler::Response(int message_type, unsigned char *payload, int payload_length, const char * node_id){
 
   bool res;
-  int id;
+  std::string node(node_id);
   int type;
   int procedureCode;
   bool valid_response  =false;
@@ -222,11 +177,11 @@ void subscription_handler::Response(int message_type, unsigned char *payload, in
       // subscription response
       // decode the message
       sub_resp.get_fields(e2ap_recv->choice.successfulOutcome, he_response);
-
       {
 	std::lock_guard<std::mutex> lock(*(_data_lock.get()));
 	// get the id
-	id = he_response.get_request_id();
+	subscription_identifier id = std::make_tuple (node, he_response.get_request_id());
+
 	// get status of id 
 	int req_status = get_request_status(id);
 	if (req_status == request_pending ){
@@ -236,7 +191,7 @@ void subscription_handler::Response(int message_type, unsigned char *payload, in
 	  
 	  else{
 	    set_request_status(id, request_duplicate);
-	    mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %d seems to be a duplicate\n", __FILE__, __LINE__, id);
+	    mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %s, %d seems to be a duplicate. Subscription already present in subscription table\n", __FILE__, __LINE__, std::get<0>(id).c_str(), std::get<1>(id));
 	  }
 	  
 	  valid_response = true;
@@ -244,11 +199,11 @@ void subscription_handler::Response(int message_type, unsigned char *payload, in
 	else if (req_status > 0){
 	  // we don't change status of response since it was not in pending
 	  // we simply fail
-	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %d is not in request_pending state, is in State = %d\n", __FILE__, __LINE__, id, req_status);
+	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %s,%d is not in request_pending state, is in State = %d\n", __FILE__, __LINE__, std::get<0>(id).c_str(), std::get<1>(id), req_status);
 	  
 	}
 	else{
-	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find id %d in request queue for subscription", __FILE__, __LINE__,  id);
+	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find id %s, %d in request queue for subscription", __FILE__, __LINE__,  std::get<0>(id).c_str(), std::get<1>(id));
 	}	  
 	
       }
@@ -260,8 +215,10 @@ void subscription_handler::Response(int message_type, unsigned char *payload, in
       res = sub_del_resp.get_fields(e2ap_recv->choice.successfulOutcome, he_response);
       {
 	std::lock_guard<std::mutex> lock(*(_data_lock.get()));
+
 	// get the id
-	id = he_response.get_request_id();
+	subscription_identifier id = std::make_tuple (node, he_response.get_request_id());
+	
 	int req_status = get_request_status(id);
 	if (req_status == delete_request_pending ){
 	  // Remove the subscription from the table 
@@ -272,18 +229,17 @@ void subscription_handler::Response(int message_type, unsigned char *payload, in
 	  }
 	  else{
 	    set_request_status(id, delete_request_failed);
-	    std::string error_string = "Error deleting subscription entry for id = ";
-	    mdclog_write(MDCLOG_ERR,  "%s, %d: %s, %d", __FILE__, __LINE__, error_string.c_str(), id);
+	    mdclog_write(MDCLOG_ERR,  "%s, %d: Error deleting subscription entry for  %s, %d", __FILE__, __LINE__, std::get<0>(id).c_str(), std::get<1>(id));
 	    valid_response = true;
 	  } 
 	}      
 	else if (req_status > 0){
 	  // we don't change status since it was not in pending
 	  // we simply fail
-	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %d for deletion  is not in delete_pending state, is in State = %d\n", __FILE__, __LINE__, id, req_status);
+	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %s, %d for deletion  is not in delete_pending state, is in State = %d\n", __FILE__, __LINE__, id, std::get<0>(id).c_str(), std::get<1>(id));
 	}
 	else{
-	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find id  %d in request queue for deletion ", __FILE__, __LINE__,  id);
+	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find request id  %s, %d in request queue for deletion ", __FILE__, __LINE__,  std::get<0>(id).c_str(), std::get<1>(id));
 	}
 
       }
@@ -304,8 +260,11 @@ void subscription_handler::Response(int message_type, unsigned char *payload, in
       
       sub_resp.get_fields(e2ap_recv->choice.unsuccessfulOutcome, he_response);
       {
-	std::lock_guard<std::mutex> lock(*(_data_lock.get()));  
-	id = he_response.get_request_id();
+	std::lock_guard<std::mutex> lock(*(_data_lock.get()));
+
+	// get the id
+	subscription_identifier id = std::make_tuple (node, he_response.get_request_id());
+
 	int req_status = get_request_status(id);
 	if(req_status == request_pending){
 	  set_request_status(id, request_failed);
@@ -315,10 +274,10 @@ void subscription_handler::Response(int message_type, unsigned char *payload, in
 	else if (req_status > 0){
 	  // we don't changet status since it was not in pending
 	  // we simply fail
-	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %d is not in request_pending state, is in State = %d\n", __FILE__, __LINE__, id, req_status);
+	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %s, %d is not in request_pending state, is in State = %d\n", __FILE__, __LINE__, std::get<0>(id).c_str(), std::get<1>(id), req_status);
 	}
 	else{
-	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find id   %d in request queue for subscription ", __FILE__, __LINE__, id);
+	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find id %s, %d in request queue for subscription ", __FILE__, __LINE__, std::get<0>(id).c_str(), std::get<1>(id));
 	}
       }
     }
@@ -329,18 +288,19 @@ void subscription_handler::Response(int message_type, unsigned char *payload, in
       {
 	std::lock_guard<std::mutex> lock(*(_data_lock.get()));
 	// get the id
-	id = he_response.get_request_id();
+	subscription_identifier id = std::make_tuple (node, he_response.get_request_id());
+	
 	int req_status = get_request_status(id);
 	if(req_status == delete_request_pending){
 	  set_request_status(id, delete_request_failed);
-	  mdclog_write(MDCLOG_INFO, "Subscription delete request %d failed", id);
+	  mdclog_write(MDCLOG_INFO, "Subscription delete request %s,%d failed", std::get<0>(id).c_str(), std::get<1>(id));
 	  valid_response = true;
 	}
 	else if (req_status > 0){
-	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %d for deletion  is not in delete_pending state, is in State = %d\n", __FILE__, __LINE__, id, req_status);
+	  mdclog_write(MDCLOG_ERR, "Error:: %s, %d: Request %s,%d for deletion  is not in delete_pending state, is in State = %d\n", __FILE__, __LINE__, std::get<0>(id).c_str(), std::get<1>(id), req_status);
 	}
 	else{
-	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find id  %d  in request queue for deletion ", __FILE__, __LINE__, id);
+	  mdclog_write(MDCLOG_ERR,  "%s, %d: Could not find id  %s,%d  in request queue for deletion ", __FILE__, __LINE__, std::get<0>(id).c_str(), std::get<1>(id));
 	}
 	
       }
@@ -365,7 +325,7 @@ void subscription_handler::Response(int message_type, unsigned char *payload, in
 }
 
 
-int const subscription_handler::get_request_status(int id){
+int const subscription_handler::get_request_status(subscription_identifier id){
   auto search = requests_table.find(id);
   if (search == requests_table.end()){
     return -1;
@@ -374,7 +334,7 @@ int const subscription_handler::get_request_status(int id){
   return search->second;
 }
 				   
- bool subscription_handler::is_subscription_entry(int id){
+ bool subscription_handler::is_subscription_entry(subscription_identifier id){
   auto search = subscription_responses.find(id);
   if (search != subscription_responses.end())
     return true;
@@ -382,10 +342,17 @@ int const subscription_handler::get_request_status(int id){
     return false;
 }
 
-bool subscription_handler::is_request_entry(int id){
+bool subscription_handler::is_request_entry(subscription_identifier id){
   auto search = requests_table.find(id);
   if (search != requests_table.end())
     return true;
   else
     return false;
+}
+
+
+void subscription_handler::get_subscription_keys(std::vector<subscription_identifier> & key_list){
+  for(auto & e: subscription_responses){
+    key_list.push_back(e.first);
+  }
 }

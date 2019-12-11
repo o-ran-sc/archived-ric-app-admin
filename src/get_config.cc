@@ -109,6 +109,11 @@ void get_environment_config(configuration & config_instance){
     mdclog_write(MDCLOG_INFO, "xAPP set to Test Mode state %d from Environment Variable",     config_instance.test_mode);
   }
 
+  if (const char *id = std::getenv("XAPP_ID")){
+    config_instance.xapp_id.assign(id);
+    mdclog_write(MDCLOG_INFO, "xAPP ID  set to Test Mode state %d from Environment Variable",     config_instance.xapp_id);
+  }
+
   if (const char *log_env = std::getenv("LOG_LEVEL")){
     if (!strcmp(log_env, "MDCLOG_INFO")){
       config_instance.log_level = MDCLOG_INFO;
@@ -146,6 +151,7 @@ void get_command_line_config(int argc, char **argv, configuration &config_instan
 	{"interval", required_argument, 0, 'i'},
 	{"gNodeB", required_argument, 0, 'g'},
 	{"opmode", required_argument, 0, 'c'},
+	{"xappid", required_argument, 0, 'x'},
 	{"verbose", no_argument, &config_instance.log_level, MDCLOG_DEBUG},
 	{"test", no_argument, &config_instance.test_mode, 1},
 	 
@@ -155,7 +161,7 @@ void get_command_line_config(int argc, char **argv, configuration &config_instan
    while(1) {
 
 	int option_index = 0;
-	char c = getopt_long(argc, argv, "n:p:t:s:g:a:v:u:i:c:", long_options, &option_index);
+	char c = getopt_long(argc, argv, "n:p:t:s:g:a:v:u:i:c:x:", long_options, &option_index);
 
         if(c == -1){
 	    break;
@@ -206,6 +212,11 @@ void get_command_line_config(int argc, char **argv, configuration &config_instan
 	    config_instance.ves_collector_url.assign(optarg);
 	    mdclog_write(MDCLOG_INFO, "VES collector url set to %s from command line ", config_instance.ves_collector_url.c_str());
 	    break;
+
+	  case 'x':
+	    config_instance.xapp_id.assign(optarg);
+	    mdclog_write(MDCLOG_INFO, "XAPP ID set to  %s from command line ", config_instance.xapp_id.c_str());
+	    break; 
 
 	  case 'i':
 	    config_instance.measurement_interval = atoi(optarg);

@@ -95,7 +95,7 @@ bool  sliding_window::update_window(unsigned int events){
 bool sliding_window::resize_window(unsigned int window_size){
   if (window_size < MIN_WINDOW_SIZE || window_size > MAX_WINDOW_SIZE){
     std::stringstream ss;
-    ss << "Error ::" << __FILE__ << ","<< __LINE__ << " window size must be in [ " << MIN_WINDOW_SIZE << "," << MAX_WINDOW_SIZE << "]"  << std::endl;
+    ss << "Error ::" << __FILE__ << ","<< __LINE__ << " Illegal window size !  window size must be in [ " << MIN_WINDOW_SIZE << "," << MAX_WINDOW_SIZE << "]"  << std::endl;
     error_string = ss.str();
     return false;
   }

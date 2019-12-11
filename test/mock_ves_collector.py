@@ -2,6 +2,8 @@ import cherrypy
 import json
 import os;
 
+Rates = {};
+
 @cherrypy.expose
 class VES(object):
     def __init__ (self):
@@ -14,6 +16,7 @@ class VES(object):
         measurement_interval = -1;
         sgnb_req_count = 0;
         sgnb_rej_count = 0;
+        class_id = None;
         timestamp = 0;
  
         if 'event' in json_data:
@@ -22,18 +25,19 @@ class VES(object):
                     measurement_interval = float(json_data['event']['measurementFields']['measurementInterval']);
 
                 if  'additionalFields' in json_data['event']['measurementFields']:
-                    if  'SgNB Request Rate' in json_data['event']['measurementFields']['additionalFields']:
-                        sgnb_req_count = float(json_data['event']['measurementFields']['additionalFields']['SgNB Request Rate']);
+                    if  'SgNB Request Count' in json_data['event']['measurementFields']['additionalFields']:
+                        sgnb_req_count = float(json_data['event']['measurementFields']['additionalFields']['SgNB Request Count']);
 
-                    if  'SgNB Accept Rate' in json_data['event']['measurementFields']['additionalFields']:
-                        sgnb_accpt_count = float(json_data['event']['measurementFields']['additionalFields']['SgNB Accept Rate']);
+                    if  'SgNB Accept Count' in json_data['event']['measurementFields']['additionalFields']:
+                        sgnb_accpt_count = float(json_data['event']['measurementFields']['additionalFields']['SgNB Accept Count']);
 
-                    if 'TS' in json_data['event']['measurementFields']['additionalFields']:
-                        timestamp = json_data['event']['measurementFields']['additionalFields']['TS'];
+                    if 'Class Id' in json_data['event']['measurementFields']['additionalFields']:
+                        class_id = int(json_data['event']['measurementFields']['additionalFields']['Class Id']);
+                        
 
-        print("{2}: Sgnb Request Rate = {0}, SgnB Accepts Rate = {1}\n".format( sgnb_req_count * 1000000.0 /measurement_interval, sgnb_accpt_count * 1000000.0/measurement_interval, timestamp));
-        #print "Received = ", json_data;
-        
+        if measurement_interval > 0:
+            print("Class:{0}|Request Rate = {1}|Accept Rate = {2}\n".format(class_id, sgnb_req_count/float(measurement_interval), sgnb_accpt_count/float(measurement_interval)));
+                        
 
 
 #=============================

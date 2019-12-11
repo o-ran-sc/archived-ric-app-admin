@@ -43,9 +43,15 @@
 #define DEFAULT_VES_SCHEMA_FILE "/etc/xapp/ves-schema.json"
 #define DEFAULT_SAMPLE_FILE "/etc/xapp/samples.json"
 #define DEFAULT_VES_COLLECTOR_URL "127.0.0.1:6350"
+#define DEFAULT_XAPP_ID "ac-xapp-123"
 #define DEFAULT_VES_MEASUREMENT_INTERVAL 10
 #define MAX_SUBSCRIPTION_ATTEMPTS 10
 //================================================
+
+// convenient typedef for the list of plugins to be loaded
+// currently only the admission control plugin. any plugin
+// should be inheriting from the Policy abstract class
+typedef  std::vector<std::unique_ptr<Policy> > plugin_list;
 
 
 // configuration parameters 
@@ -67,6 +73,7 @@ struct configuration {
   bool report_mode_only = true;
   std::string operating_mode = "REPORT";
   int max_sub_loops = 2;
+  std::string xapp_id;
   void fill_gnodeb_list(char * gNodeB_string){
     gNodeB_list.clear();
     char * gnb = strtok(gNodeB_string, ",");
@@ -81,9 +88,28 @@ struct configuration {
 
 };
 
+// class that handles startup and shutdown operations
+class  init {
+public:
+  init(XaPP & , subscription_handler & , configuration &);
+  void startup(void);
+  void shutdown(void);
+  
+private:
+  void startup_subscribe_requests(void );
+  void shutdown_subscribe_deletes(void);
+  void startup_get_policies(void );
+  
+  subscription_handler * sub_handler_ref;
+  XaPP * xapp_ref;
+  configuration * config_ref;
+};
+
 void usage(char *command);
 void get_environment_config(configuration & config_instance);
 void get_command_line_config(int argc, char **argv, configuration &config_instance);
+
+extern int run_program;
 extern bool report_mode_only;
 
 #endif

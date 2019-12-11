@@ -166,6 +166,7 @@ TEST_CASE("X2AP PDUs", "[X2AP SgNB Addition Request]"){
 	REQUIRE(encode_data.menb_ue_x2ap_id == decode_data.menb_ue_x2ap_id);
 	REQUIRE(encode_data.bit_rate_max_up == decode_data.bit_rate_max_up);
 	REQUIRE(encode_data.bit_rate_max_dn == decode_data.bit_rate_max_dn);
+	REQUIRE(encode_data.subscriber_profile_id == decode_data.subscriber_profile_id);
 	ASN_STRUCT_FREE(asn_DEF_X2N_X2AP_PDU, x2ap_pdu_obj);
       }
       
@@ -231,6 +232,8 @@ TEST_CASE("X2AP PDUs", "[X2AP SgNB Addition Request]"){
 	REQUIRE(encode_data.menb_ue_x2ap_id == decode_data.menb_ue_x2ap_id);
 	REQUIRE(encode_data.bit_rate_max_up == decode_data.bit_rate_max_up);
 	REQUIRE(encode_data.bit_rate_max_dn == decode_data.bit_rate_max_dn);
+	REQUIRE(encode_data.subscriber_profile_id == decode_data.subscriber_profile_id);
+
 	ASN_STRUCT_FREE(asn_DEF_X2N_X2AP_PDU, x2ap_pdu_obj);
       }
       

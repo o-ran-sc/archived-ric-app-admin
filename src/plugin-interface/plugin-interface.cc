@@ -21,12 +21,6 @@
 #include "plugin-interface.hpp"
 
 
-std::string  Policy::getError(void) const{
-  return _error;
-}
-void Policy::setError(std::string & error){
-  _error.assign(error);
-}
 
 Policy::~Policy(void){
 };
