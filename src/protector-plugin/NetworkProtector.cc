@@ -26,19 +26,31 @@
 #include <cstdlib>  // For srand() and rand()
 
 
-protector::protector(bool enforce,   int windowSize_, int threshold_, double blockRate_, bool report):  m_enforce(enforce),  m_windowSize(windowSize_), m_threshold(threshold_), m_blockRate(blockRate_), m_req(0), m_rej(0)
-{	
-  m_counter = 0;
-  m_window_ref = std::make_unique<sliding_window>(m_windowSize);
+protector::protector( bool report){	
   m_access = std::make_unique<std::mutex>();
   report_mode_only = report;
+
+  // there is always a default policy with id 0 (never gets deleted, can only be re-configured)
+  // default values from policy constructor will be used.
+  policy_list.insert(std::pair<int, protector_policy>(0, protector_policy()));
+
+}
+
+// constructor that over-rides default values for policy 0
+protector::protector( bool enforce, int window_size, int threshold, double blocking_rate, bool report){	
+  m_access = std::make_unique<std::mutex>();
+  report_mode_only = report;
+
+  // there is always a default policy with id 0 (never gets deleted, can only be re-configured)
+  policy_list.insert(std::pair<int, protector_policy>(0, protector_policy(enforce, window_size, threshold, blocking_rate)));
+  
 }
 
 
-bool protector::operator()(unsigned char *msg_ref, size_t msg_size, unsigned char * buffer, size_t *buf_size )
-{
+bool protector::operator()(unsigned char *msg_ref, size_t msg_size, unsigned char * buffer, size_t *buf_size ){
   
   bool res = true;
+  protector_policy * policy_ref;
   
   std::lock_guard<std::mutex> lck(*(m_access.get()));
   
@@ -78,7 +90,7 @@ bool protector::operator()(unsigned char *msg_ref, size_t msg_size, unsigned cha
   }
   
   if (res){
-
+    
     mdclog_write(MDCLOG_DEBUG, "Extracting SgNB Addition Request fields...");
 
     //std::cout <<"%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%" << std::endl;
@@ -91,23 +103,35 @@ bool protector::operator()(unsigned char *msg_ref, size_t msg_size, unsigned cha
     }
     
     if (res){
-      mdclog_write(MDCLOG_DEBUG, "Decoded and extracted X2AP PDU data. Number of erabs = %u\n", sgnb_data.get_list()->size());
+      mdclog_write(MDCLOG_DEBUG, "Decoded and extracted X2AP PDU data. Number of erabs = %lu\n", sgnb_data.get_list()->size());
       mdclog_write(MDCLOG_DEBUG, "Applying admission control logic ...");
 
-      // Admission control  
-      m_req ++;
+      // Find if policy associated with this subscription id
+      auto it_policy = policy_list.find(sgnb_data.subscriber_profile_id);
+      
+      if (it_policy == policy_list.end()){
+	// apply default policy
+	policy_ref = & policy_list[0];
+      }
+      else{
+	policy_ref = & (it_policy->second);
+      }
 
-      // update sliding window
-      m_window_ref.get()->update_window(1);
-      if ( m_enforce && m_window_ref.get()->net_events  > m_threshold){
-	res = selectiveBlock();
+      net_requests ++;
+      policy_ref->_req++;	
+      policy_ref->_window_ref.get()->update_window(1);
+
+      // apply blocking probability if m_enforce
+      if ( policy_ref->_enforce && policy_ref->_window_ref.get()->net_events  > policy_ref->_threshold){
+	res = selectiveBlock(policy_ref->_block_rate);
       }
       else{
 	res = true;
       }
 
       if (!res){
-          m_rej ++;
+	policy_ref->_rej ++;
+	net_rejects ++;
       }
       
       mdclog_write(MDCLOG_DEBUG, "Plugin decision for sgnb request = %d\n", res);
@@ -138,56 +162,240 @@ bool protector::operator()(unsigned char *msg_ref, size_t msg_size, unsigned cha
       }
     }
   }
-
+ 
+  
   ASN_STRUCT_FREE(asn_DEF_X2N_X2AP_PDU, x2ap_recv);
   return res;
   
 }
-
-bool protector::configure(bool enforce, int windowSize_, int threshold_, double blockRate_)
-{
+  
+// configure an existing policy 
+bool protector::configure(bool enforce, int windowSize_, int threshold_, double blockRate_, int id){
   std::lock_guard<std::mutex> lck(*(m_access.get()));
+  std::stringstream ss;
   
-
-  
-  m_windowSize=windowSize_;
-  bool res = m_window_ref.get()->resize_window(m_windowSize);
-  if (!res){
+  // basic validation of  input
+  if(windowSize_ <= 0){
+    ss << "Illegal value for window size = " << windowSize_ << " when configuring policy " << std::endl;
+    error_string = ss.str();
     return false;
   }
 
-  m_enforce = enforce;
-  m_threshold=threshold_;
-  m_blockRate=blockRate_;
+  if(threshold_ < 0){
+    ss << "Illegal value for trigger threshold = " << threshold_ << " when configuring policy " << std::endl;
+    error_string = ss.str();
+    return false;
+  }
 
-  mdclog_write(MDCLOG_INFO, "Policy : Enforce mode set to %d\n", m_enforce);
-  mdclog_write(MDCLOG_INFO, "Policy:  Trigger threshold set to %d\n", m_threshold);
-  mdclog_write(MDCLOG_INFO, "Policy : Blocking rate set to %f\n", m_blockRate);
-  mdclog_write(MDCLOG_INFO, "Policy : Window Size set to %d\n", m_windowSize);
+  if(blockRate_ < 0 || blockRate_ > 100){
+    ss << "Illegal value for blocking rate = " << blockRate_ << " when configuring policy " << std::endl;
+    error_string = ss.str();
+    return false;
+  }
+  if (id < 0){
+    ss << "Illegal value for class id  = " << id << " when configuring policy " << std::endl;
+    error_string = ss.str();
+    return false;
+  }
+	       
+  // find policy
+  auto policy_it = policy_list.find(id);
+  if (policy_it == policy_list.end()){
+    mdclog_write(MDCLOG_ERR, "Error : %s, %d : No policy with id %d found for configuration\n", __FILE__, __LINE__,  id);
+    return false;
+  }
+  
+  bool res = policy_it->second._window_ref.get()->resize_window(windowSize_);
+  if (!res){
+    error_string = policy_it->second._window_ref.get()->get_error();
+    return false;
+  }
+  policy_it->second._window_size = windowSize_;
+  
+  // enforce is set globally
+  policy_it->second._enforce = enforce;
+  
+  policy_it->second._threshold=threshold_;
+  policy_it->second._block_rate=blockRate_;
+  mdclog_write(MDCLOG_DEBUG, "Configured policy with id %d with enforce=%d, window size = %d, threshold = %d, blocking rate = %f\n", id, policy_it->second._enforce, policy_it->second._window_size, policy_it->second._threshold, policy_it->second._block_rate);
+  
   return true;
 }
 
-unsigned long int protector::get_requests(void) const {
-  return m_req;
+// add a policy
+bool protector::add_policy(bool enforce, int windowSize_, int threshold_, double blockRate_, int id){
+  std::lock_guard<std::mutex> lck(*(m_access.get()));
+  std::stringstream ss;
+
+
+    // find policy
+  auto policy_it = policy_list.find(id);
+  if (policy_it != policy_list.end()){
+    ss <<"Error : " << __FILE__ << "," << __LINE__ << ": " << "Policy with id " << id << " already exists. Cannot be added" << std::endl;
+    error_string = ss.str();
+    mdclog_write(MDCLOG_ERR, "%s\n", error_string.c_str());
+    return false;
+  }
+
+  // basic validation of  input
+  if(windowSize_ <= 0){
+    ss << "Illegal value for window size = " << windowSize_ << " when adding policy " << std::endl;
+    error_string = ss.str();
+    return false;
+  }
+  if(threshold_ < 0){
+    ss << "Illegal value for trigger threshold = " << threshold_ << " when adding policy " << std::endl;
+    error_string = ss.str();
+    return false;
+  }
+
+  if(blockRate_ < 0 || blockRate_ > 100){
+    ss << "Illegal value for blocking rate = " << blockRate_ << " when adding policy " << std::endl;
+    error_string = ss.str();
+    return false;
+  }
+  if (id < 0){
+    ss << "Illegal value for class id  = " << id << " when adding policy " << std::endl;
+    error_string = ss.str();
+    return false;
+  }
+	       
+
+  // create the policy
+  try{
+    policy_list.insert(std::pair<int,  protector_policy> (id, protector_policy(enforce, windowSize_, threshold_, blockRate_)));
+  }
+  catch(std::exception &e){
+    ss <<"Error : " << __FILE__ << "," << __LINE__ << ": " << "Error creating policy. Reason = " << e.what() << std::endl;
+    error_string = ss.str();
+    mdclog_write(MDCLOG_ERR, "%s\n", error_string.c_str());
+    return false;
+  }
+
+  mdclog_write(MDCLOG_DEBUG, "Added new policy with id %d with enforce=%d, window size = %d, threshold = %d, blocking rate = %f\n", id, enforce, windowSize_, threshold_, blockRate_);
+
+  return true;
 }
 
-unsigned long int protector::get_rejects(void) const {
-  return m_rej;
+// delete a policy
+bool protector::delete_policy(int id){
+  std::lock_guard<std::mutex> lck(*(m_access.get()));
+  std::stringstream ss;
+  auto policy_it = policy_list.find(id);
+  if (policy_it == policy_list.end()){
+    ss <<"Error : " << __FILE__ << "," << __LINE__ << ": " << " No policy with id  = " << id << " found" << std::endl;
+    error_string = ss.str();
+    mdclog_write(MDCLOG_ERR, "%s\n", error_string.c_str());
+    return false;
+  }
+
+  policy_list.erase(policy_it);
+  mdclog_write(MDCLOG_DEBUG, "Deleted policy %d\n", id);
+  return true;
 }
 
+
+// query a policy : responsibility of caller to ensure
+// vector is empty
+// returns parameters of policy in the vector
+bool protector::query_policy(int id, std::vector<double> & info){
+
+  std::lock_guard<std::mutex> lck(*(m_access.get()));
+  auto policy_it = policy_list.find(id);
+  if (policy_it == policy_list.end()){
+    return false;
+  }
+
+  info.push_back(policy_it->second._enforce);
+  info.push_back(policy_it->second._window_size);
+  info.push_back(policy_it->second._threshold);
+  info.push_back(policy_it->second._block_rate);
+  return true;
+}
+
+// returns requests that fall under a policy
+// if id is -1, returns total requests
+// if non-existent policy, returns -1
+// counters are cumulative
+long int protector::get_requests(int id) const {
+  if (id == -1){
+    return net_requests;
+  }
+
+  std::lock_guard<std::mutex> lck(*(m_access.get()));
+  auto policy_it = policy_list.find(id);
+  if (policy_it == policy_list.end()){
+    return -1;
+  }
+  else{
+    return policy_it->second._req;
+  }
+  
+}
+
+// returns requests that fall under a policy
+// if id is -1 , returns total rejects
+// if non-existent policy, returns -1
+// counters are cumulative
+long int protector::get_rejects(int id) const {
+
+  if (id == -1){
+    return net_rejects;
+  }
+
+  std::lock_guard<std::mutex> lck(*(m_access.get()));
+  auto policy_it = policy_list.find(id);
+  if (policy_it == policy_list.end()){
+    return -1;
+  }
+  else{
+    return policy_it->second._rej;
+  }
+
+}
+
+// returns list of active policies in
+// supplied vector (policy is indexed by subscriber profile id)
+void protector::get_active_policies(std::vector<int> & active){
+  std::lock_guard<std::mutex> lck(*(m_access.get()));
+  for (const auto &e : policy_list){
+    active.push_back(e.first);
+  }
+}
+
+// returns true if policy active else false
+bool protector::is_active(int id){
+  auto policy_it = policy_list.find(id);
+  if (policy_it == policy_list.end()){
+    return false;
+  }
+  else{
+    return true;
+  }
+}
+
+// clears counters for all policies 
 void protector::clear()
 {
+
   std::lock_guard<std::mutex> lck(*(m_access.get()));
-  m_req = 0;
-  m_rej = 0;
-  m_window_ref.get()->clear();
+  
+  for(auto &e : policy_list){
+    e.second._window_ref.get()->clear();
+    e.second._counter = 0;
+    e.second._req = 0;
+    e.second._rej = 0;
+  }
+
+  net_requests = 0;
+  net_rejects  = 0;
 }
 
 
-bool protector::selectiveBlock() 
+bool protector::selectiveBlock(double block_rate) 
 {
   unsigned int num = (rand() % 100) + 1;    
-  if (num > m_blockRate)  //not blocking
+  if (num > block_rate)  //not blocking
     return true;
   else                    //blocking
     return false;

@@ -15,7 +15,6 @@
 #   limitations under the License.
 
 newrt|start
-rte|0|localhost:4999
 rte|102|localhost:4999
 rte|101|localhost:4998
 rte|2|localhost:38000
@@ -32,5 +31,6 @@ rte|12040|localhost:38000
 rte|12050|localhost:4560
 rte|20000|localhost:4560
 rte|20002|localhost:4560
+rte|20010|localhost:4560
 rte|1111|localhost:38000
 newrt|end

@@ -67,7 +67,7 @@ typedef enum {
 class message_processor {
 
 public:
-  message_processor(int mode=ALL, bool rep=true, size_t buffer_length = 2048, size_t reporting_interval = 100);
+  message_processor(int mode=ALL, bool rep=true, size_t buffer_length = 2048);
   ~message_processor(void);
   
   bool operator() (rmr_mbuf_t *);  

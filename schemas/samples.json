@@ -1,40 +1,49 @@
 {
- "message_receives_example": {
+    "downstream_policy_message": {
+	"policy_type_id":21000,
+	"operation":"CREATE",
+	"policy_instance_id":"Hello-world",
+	"payload":{
+	    "class":12,
 	    "enforce":true,
-	    "window_length":10,
+	    "window_length":20,
 	    "blocking_rate":20,
 	    "trigger_threshold":10
-  },
-
- "message_sends_example": {
-  "status":"SUCCESS",
-  "message":"Config applied"
- },
-
- "metrics": {
-  "event": {
-    "commonEventHeader": {
-      "startEpochMicrosec": 1542231546086613,
-      "eventId": "sGNB Requests",
-      "eventType": "sGNB Request Rate",
-      "priority": "Normal",
-      "version": "4.0.1",
-      "reportingEntityName": "AC xAPP",
-      "sequence": 0,
-      "domain": "measurement",
-      "lastEpochMicrosec": 1542231556086613,
-      "eventName": "Measurement_vGMUX",
-      "sourceName": "adm-ctrl-xapp",
-      "vesEventListenerVersion": "7.0.1"
+	}
     },
-   "measurementFields": {
-	  "additionalFields":{
-		"SgNB Request Rate":"100",
-                "SgNB Accept Rate":"10"
-          },
-          "measurementInterval":60,
-          "measurementFieldsVersion":"4.0"
+    
+    "notify_policy_message": {
+	"policy_instance_id":"Hello-world",
+	"policy_type_id":21000,
+	"status":"OK",
+        "handler_id":"ACxAPP1234"
+    },
+    
+    "metrics": {
+	"event": {
+	    "commonEventHeader": {
+		"startEpochMicrosec": 1542231546086613,
+		"eventId": "sGNB Requests",
+		"eventType": "sGNB Request Rate",
+		"priority": "Normal",
+		"version": "4.0.1",
+		"reportingEntityName": "AC xAPP",
+		"sequence": 0,
+		"domain": "measurement",
+		"lastEpochMicrosec": 1542231556086613,
+		"eventName": "Measurement_vGMUX",
+		"sourceName": "adm-ctrl-xapp",
+		"vesEventListenerVersion": "7.0.1"
+	    },
+	    "measurementFields": {
+		"additionalFields":{
+		    "Class Id":1,
+		    "SgNB Request Count":"100",
+                    "SgNB Accept Count":"10"
+		},
+		"measurementInterval":60,
+		"measurementFieldsVersion":"4.0"
+	    }
+	}
     }
-  }
- }
 }

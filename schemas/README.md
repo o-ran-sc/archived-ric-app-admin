@@ -1,22 +1,7 @@
-#==================================================================================
-#        Copyright (c) 2018-2019 AT&T Intellectual Property.
-#
-#   Licensed under the Apache License, Version 2.0 (the "License");
-#   you may not use this file except in compliance with the License.
-#   You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-#   Unless required by applicable law or agreed to in writing, software
-#   distributed under the License is distributed on an "AS IS" BASIS,
-#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#   See the License for the specific language governing permissions and
-#   limitations under the License.
-#==================================================================================
 This directory contains the various JSON payloads received/sent by the xAPP and the associated schemas.
 
 1. Policy messages are set (and requested) via RMR. The A1 mediator which sends these requests verifies that the messages conform to schema specified by the xAPP developer (the AC xAPP also validates this).  The schema for the policies is provided by the xAPP developer 
-	- The AC xAPP policy schema file is adm-ctrl-xapp-policy-schema.json
+	- The AC xAPP policy schema file is rate-control-policy.json
 
 2. Similarly, metrics posted to the VES collector must conform to the global schema specified by the VES collector.
 	- the ves schema file is ves_schema.json
