@@ -41,7 +41,11 @@ subscription_request::subscription_request(void){
   action_array = (E2N_RICaction_ToBeSetup_ItemIEs_t *)calloc(INITIAL_REQUEST_LIST_SIZE, sizeof(E2N_RICaction_ToBeSetup_ItemIEs_t));
   assert(action_array != 0);
   action_array_size = INITIAL_REQUEST_LIST_SIZE;
-
+  // also need to add subsequent action and time to wait ..
+  for (unsigned int i = 0; i < action_array_size; i++){
+    action_array[i].value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction = (struct E2N_RICsubsequentAction *)calloc(1, sizeof(struct E2N_RICsubsequentAction));
+    assert(action_array[i].value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction  != 0);
+  }
   
   e2ap_pdu_obj->choice.initiatingMessage = initMsg;
   e2ap_pdu_obj->present = E2N_E2AP_PDU_PR_initiatingMessage;
@@ -69,6 +73,11 @@ subscription_request::~subscription_request(void){
     ricsubscription_ie->ricAction_ToBeSetup_List.list.size = 0;
     ricsubscription_ie->ricAction_ToBeSetup_List.list.count = 0;
     ricsubscription_ie->ricAction_ToBeSetup_List.list.array = 0;
+  }
+
+  // clear subsequent action array
+  for (unsigned int i = 0; i < action_array_size; i++){
+    free(action_array[i].value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction );
   }
   
   free(action_array);
@@ -190,22 +199,35 @@ bool subscription_request::set_fields( E2N_InitiatingMessage_t * init_msg, subsc
   // we don't care about contents, so just do a free/calloc
   if(action_array_size < ref_action_array->size()){
     std::cout <<"re-allocating action array from " << action_array_size << " to " << 2 * ref_action_array->size() <<  std::endl;
+    // free subsequent allocation
+    for (unsigned int i = 0; i < action_array_size; i++){
+      free(action_array[i].value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction );
+    }
     
     action_array_size = 2 * ref_action_array->size();
     free(action_array);
     action_array = (E2N_RICaction_ToBeSetup_ItemIEs_t *)calloc(action_array_size, sizeof(E2N_RICaction_ToBeSetup_ItemIEs_t));
     assert(action_array != 0);
+
+    // also need to add subsequent action and time to wait ..
+    for (unsigned int i = 0; i < action_array_size; i++){
+      action_array[i].value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction = (struct E2N_RICsubsequentAction *)calloc(1, sizeof(struct E2N_RICsubsequentAction));
+      assert(action_array[i].value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction  != 0);
+    }
+    
   }
   
   // reset the list count on ricAction_ToBeSetup_List;
   ricsubscription_ie->ricAction_ToBeSetup_List.list.count = 0;
   
-  for(int i = 0; i < ref_action_array->size(); i ++){
+  for(unsigned int i = 0; i < ref_action_array->size(); i ++){
     action_array[i].criticality = E2N_Criticality_ignore;
     action_array[i].id = E2N_ProtocolIE_ID_id_RICaction_ToBeSetup_Item ;
     action_array[i].value.present = E2N_RICaction_ToBeSetup_ItemIEs__value_PR_RICaction_ToBeSetup_Item;
     action_array[i].value.choice.RICaction_ToBeSetup_Item.ricActionID = (*ref_action_array)[i].get_id();
     action_array[i].value.choice.RICaction_ToBeSetup_Item.ricActionType = (*ref_action_array)[i].get_type();
+    action_array[i].value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction->ricSubsequentActionType = (*ref_action_array)[i].get_subsequent_action();
+    action_array[i].value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction->ricTimeToWait = (*ref_action_array)[i].get_wait();
     
     result = ASN_SEQUENCE_ADD(&ricsubscription_ie->ricAction_ToBeSetup_List, &(action_array[i]));
     if (result == -1){
@@ -258,9 +280,15 @@ bool subscription_request:: get_fields(E2N_InitiatingMessage_t * init_msg,  subs
 	  
 	for(int index = 0; index < ricsubscription->ricAction_ToBeSetup_List.list.count; index ++){
 	  E2N_RICaction_ToBeSetup_ItemIEs_t * item = (E2N_RICaction_ToBeSetup_ItemIEs_t *)ricsubscription->ricAction_ToBeSetup_List.list.array[index];
-	  dout.add_action(item->value.choice.RICaction_ToBeSetup_Item.ricActionID, item->value.choice.RICaction_ToBeSetup_Item.ricActionType);
+	  if (item->value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction == NULL){
+	    dout.add_action(item->value.choice.RICaction_ToBeSetup_Item.ricActionID, item->value.choice.RICaction_ToBeSetup_Item.ricActionType);
+	  }
+	  else{
+	    std::string action_def = ""; // for now we are ignoring action definition
+	    dout.add_action(item->value.choice.RICaction_ToBeSetup_Item.ricActionID, item->value.choice.RICaction_ToBeSetup_Item.ricActionType, action_def, item->value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction->ricSubsequentActionType, item->value.choice.RICaction_ToBeSetup_Item.ricSubsequentAction->ricTimeToWait);
+	  }   
 	};
-	  
+	
 	break;
       }
       

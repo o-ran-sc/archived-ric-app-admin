@@ -82,9 +82,11 @@ void init::startup_subscribe_requests(void ){
    int request_id = 2; // will be over-written by subscription handler
    int req_seq = 1;
    int function_id = 0;
-   int action_id = 4;
+   int action_id = 1;
    int action_type = config_ref->report_mode_only ? 0:1;
-   
+   int subsequent_action = 0; // continue
+   int time_to_wait = 4; // 10ms
+ 
    int message_type = 1;
    int procedure_code = 27;
    std::string egnb_id = "Testgnb";
@@ -121,7 +123,7 @@ void init::startup_subscribe_requests(void ){
    sgnb_add_subscr_req.clear();
    sgnb_add_subscr_req.set_request(request_id, req_seq);
    sgnb_add_subscr_req.set_function_id(function_id);
-   sgnb_add_subscr_req.add_action(action_id, action_type);
+   sgnb_add_subscr_req.add_action(action_id, action_type, "", subsequent_action, time_to_wait);
    
    sgnb_add_subscr_req.set_event_def(&event_buf[0], event_buf_len);
 
@@ -225,9 +227,11 @@ void init::shutdown_subscribe_deletes(){
 
 //Request policies on start up
 // This is async : once query is sent. responses from A1 are handled on RMR threads
+// Ideally this should be done on a per-plugin basis (but for now hard-coded :) ) 
+// Should match the same policy type in schemas/rate-control-policy.json
 void init::startup_get_policies(void){
 
-  int policy_id = 21000;
+  int policy_id = RATE_CONTROL_POLICY_ID;
 
   // we simply create json from scratch for now since it is quite simple
   std::string policy_query = "{\"policy_id\":" + std::to_string(policy_id) + "}";

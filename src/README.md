@@ -73,7 +73,6 @@ A sample script ./run_xapp.sh  is provided to illustrate and   execute the xAPP 
  -u : URL path for VES collector
  -g : comma separated list of gNodeBs to send subscription request to
  -i : time interval  (in seconds) at which to post metrics to the VES collector
--x  : xapp-id string used to identify in A1 work flows
  -c : operation model (CONTROL, REPORT, E2AP_PROC_ONLY)
        * in the E2AP_PROC_ONLY mode, the Admission Control xAPP will simply process only the E2AP Indication part of the RMR message. It does not process the X2 portion of the message or invoke the sliding window algorithm or send a response back. This is useful to just test basic functionality without a valid X2 message.
 

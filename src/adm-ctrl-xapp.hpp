@@ -46,6 +46,7 @@
 #define DEFAULT_XAPP_ID "ac-xapp-123"
 #define DEFAULT_VES_MEASUREMENT_INTERVAL 10
 #define MAX_SUBSCRIPTION_ATTEMPTS 10
+#define RATE_CONTROL_POLICY_ID 21000
 //================================================
 
 // convenient typedef for the list of plugins to be loaded

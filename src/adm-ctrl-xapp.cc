@@ -40,7 +40,22 @@ std::map<int, Policy *> plugin_rmr_map;
 // It still works with R2, but ideally should be modified since a single policy type could be applied to multiple plugins.
 
 void  policy_handler(int message_type, const char * message, int message_len, std::string & response, bool set){
-  auto it = plugin_rmr_map.find(message_type);
+  
+  // Extract policy id type : for now we assume exactly 1 plugin maps to each policy type
+  rapidjson::Pointer policy_type_ref("/policy_type_id");
+  rapidjson::Document doc;
+  if (doc.Parse(message).HasParseError()){
+    mdclog_write(MDCLOG_ERR, "Error: %s, %d :: Could not decode A1 JSON message %s\n", __FILE__, __LINE__, message);
+    return;
+  }
+  rapidjson::Value * ref = policy_type_ref.Get(doc);
+  if (ref == NULL){
+    mdclog_write(MDCLOG_ERR, "Error : %s, %d:: Could not extract policy type id from %s\n", __FILE__, __LINE__, message);
+    return;
+  }
+  int policy_type_id = ref->GetInt();
+
+  auto it = plugin_rmr_map.find(policy_type_id);
   bool res;
   if (it != plugin_rmr_map.end()){
     if (set){
@@ -65,7 +80,7 @@ void  policy_handler(int message_type, const char * message, int message_len, st
     }
   }
   else{
-    response = "{\"status\":\"FAIL\", \"message\":\"Could not find plugin associated with RMR message type = " + std::to_string(message_type) + "\"}";
+    response = "{\"status\":\"FAIL\", \"message\":\"Could not find plugin associated with policy type id  = " + std::to_string(policy_type_id) + "\"}";
     mdclog_write(MDCLOG_ERR, "Error ! %s, %d : %s\n", __FILE__, __LINE__, response.c_str());
   }
 };
@@ -185,7 +200,7 @@ int main(int argc, char *argv[]){
   
   // Add reference to plugin list . 
   // Plugin list is used by policy handler and metrics collector
-   plugin_rmr_map.insert(std::pair<int, Policy *>(A1_POLICY_REQ, Plugins[0].get()));
+   plugin_rmr_map.insert(std::pair<int, Policy *>(RATE_CONTROL_POLICY_ID, Plugins[0].get()));
    
    // instantiate ves thread (it polls all plugins and sends out their metrics) 
    std::thread metrics_thread(metrics_collector, my_config.ves_collector_url, &Plugins, my_config.measurement_interval);

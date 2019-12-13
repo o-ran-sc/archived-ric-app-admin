@@ -36,11 +36,14 @@
 #include <vector>
 #include <memory>
 
+
+// Note : if no action definition specified, octet length of action definition  is NULL
+// If no subsequent action specified, default is subsequent_action = 0, time to wait is 0
 struct Action {
 
 public:
   
-  Action(int id, int type): _is_def(false), _is_subs_act(false), _id(id), _type(type){};
+  Action(int id, int type): _is_def(false), _is_subs_act(false), _id(id), _type(type), _next_action(0), _wait(0){};
   Action(int id, int type, const void *def, size_t def_size, int next, int wait): _is_def(false), _is_subs_act(false), _id(id), _type(type){
     
     if (def_size > 0){

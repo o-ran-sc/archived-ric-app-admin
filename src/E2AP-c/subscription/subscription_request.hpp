@@ -34,6 +34,7 @@
 #include <E2N_ProtocolIE-Field.h>
 #include <E2N_ProtocolIE-Single-Container.h>
 #include <E2N_RICactions-ToBeSetup-List.h>
+#include <E2N_RICsubsequentAction.h>
 
 #define NUM_SUBSCRIPTION_REQUEST_IES 3
 #define INITIAL_REQUEST_LIST_SIZE 4

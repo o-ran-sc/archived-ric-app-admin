@@ -87,7 +87,7 @@ TEST_CASE("E2AP PDU Subscription", "RIC Susbcription/Deletion Requests"){
       din.clear();
       for(int i = 0; i < num_act; i++){
 	int type = rand() % 3;
-	din.add_action(i, type);
+	din.add_action(i, type, "test", 1, 1);
       }
 
       buf_size = BUFFER_SIZE;

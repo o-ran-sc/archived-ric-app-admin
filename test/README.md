@@ -28,3 +28,8 @@ Pre-requisities for running the mock ves collector are :
 2. cherrypy module (pip install cherrypy)
 
 The mock ves collector can be simply invoked as python ./mock_ves_collector.py
+
+
+3. A mock A1 mediator : The mock up a1 mediator executable sends various JSON (valid/invalid) payloads in sequence to illustrate the behaviour and response of the AC xAPP. It can be compiled  as 'make mock-a1-server'
+To execute the mock-a1-server,  it requires as argument a port to listen and send on (can be any port that does not conflict with others). The A1 mediator uses rts send/receive and hence bypasses the routing table. 
+./mock-a1-server -p <port number> 
