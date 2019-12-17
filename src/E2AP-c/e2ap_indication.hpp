@@ -35,48 +35,33 @@
 #include <E2N_InitiatingMessage.h>
 #include <E2N_RICindication.h>
 #include <E2N_ProtocolIE-Field.h>
+#include "e2ap_indication_helper.hpp"
 
-#define NUM_INDICATION_IES 7
+#define NUM_INDICATION_IES 8
   
-  typedef struct ric_indication_helper ric_indication_helper;
-  
-  struct ric_indication_helper{
-    ric_indication_helper(void) : req_id(1), req_seq_no(1), func_id(0), action_id(1), indication_type(0), indication_sn(0), indication_msg(0), indication_msg_size(0), indication_header(0), indication_header_size(0), call_process_id(0), call_process_id_size(0) {};
-    long int req_id, req_seq_no, func_id, action_id, indication_type, indication_sn;
-    
-    unsigned char* indication_msg;
-    size_t indication_msg_size;
-    
-    unsigned char* indication_header;
-    size_t indication_header_size;
 
-    unsigned char *call_process_id;
-    size_t call_process_id_size;
-    
-  };
-  
-  
-  class ric_indication{
-    
-  public:
-    ric_indication(void);
-    ~ric_indication(void);
-    
-    bool encode_e2ap_indication(unsigned char *, size_t *,  ric_indication_helper &);
-    E2N_InitiatingMessage_t * get_message (void) ;
-    bool set_fields(E2N_InitiatingMessage_t *, ric_indication_helper &);
-    bool get_fields(E2N_InitiatingMessage_t *, ric_indication_helper &);
-    std::string get_error(void) const {return error_string ; };
 
-  private:
-
-    E2N_E2AP_PDU_t * e2ap_pdu_obj;
-    E2N_InitiatingMessage_t *initMsg;
-    E2N_RICindication_IEs_t *IE_array;
-    std::string error_string;
-    char errbuf[128];
-    size_t errbuf_len = 128;
-  };
+class ric_indication{
+  
+public:
+  ric_indication(void);
+  ~ric_indication(void);
+  
+  bool encode_e2ap_indication(unsigned char *, size_t *,  ric_indication_helper &);
+  E2N_InitiatingMessage_t * get_message (void) ;
+  bool set_fields(E2N_InitiatingMessage_t *, ric_indication_helper &);
+  bool get_fields(E2N_InitiatingMessage_t *, ric_indication_helper &);
+  std::string get_error(void) const {return error_string ; };
+  
+private:
+  
+  E2N_E2AP_PDU_t * e2ap_pdu_obj;
+  E2N_InitiatingMessage_t *initMsg;
+  E2N_RICindication_IEs_t *IE_array;
+  std::string error_string;
+  char errbuf[128];
+  size_t errbuf_len = 128;
+};
 
 
 #endif /* E2AP_RIC_INDICATION_H_ */

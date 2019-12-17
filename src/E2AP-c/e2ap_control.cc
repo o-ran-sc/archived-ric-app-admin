@@ -193,6 +193,18 @@ bool ric_control_request::set_fields(E2N_InitiatingMessage_t *initMsg, ric_contr
   *ricackreq_ie = dinput.control_ack;
   ASN_SEQUENCE_ADD(&(ric_control_request->protocolIEs), &(IE_array[ie_index]));
 
+  ie_index = 5;
+  if(dinput.call_process_id_size > 0){
+    E2N_RICcontrolRequest_IEs_t *ies_callprocid = &IE_array[ie_index];
+    ies_callprocid->criticality = E2N_Criticality_reject;
+    ies_callprocid->id = E2N_ProtocolIE_ID_id_RICcallProcessID;
+    ies_callprocid->value.present = E2N_RICcontrolRequest_IEs__value_PR_RICcallProcessID;
+    E2N_RICcallProcessID_t *riccallprocessid_ie = &ies_callprocid->value.choice.RICcallProcessID;
+    riccallprocessid_ie->buf = dinput.call_process_id;
+    riccallprocessid_ie->size = dinput.call_process_id_size;
+    ASN_SEQUENCE_ADD(&(ric_control_request->protocolIEs), &(IE_array[ie_index]));
+
+  }
   return true;
 
 };
@@ -240,7 +252,6 @@ bool ric_control_request:: get_fields(E2N_InitiatingMessage_t * init_msg,  ric_c
       case (E2N_ProtocolIE_ID_id_RICcontrolAckRequest):
   	dout.control_ack = memb_ptr->value.choice.RICcontrolAckRequest;
   	break;
-	
 	
       default:
   	break;

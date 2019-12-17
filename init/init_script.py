@@ -28,7 +28,18 @@
 import json;
 import sys;
 import os;
+import signal;
+import time;
 
+
+def signal_handler(signum, frame):
+    print("Received signal {0}\n".format(signum));
+    if(xapp_subprocess == None or xapp_pid == None):
+        print("No xapp running. Quiting without sending signal to xapp\n");
+    else:
+        print("Sending signal {0} to xapp ...".format(signum));
+        xapp_subprocess.send_signal(signum);
+        
 
 def parseConfigJson(config):
     for key in config:
@@ -113,6 +124,10 @@ def getEnvs(config):
 
     return True;
 
+
+# Global variables ...
+xapp_subprocess = None;
+xapp_pid = None;
 ParseSection = {};
 xapp_port = 0;
 ParseSection["rmr"] = getRMRTable;
@@ -137,7 +152,7 @@ if __name__ == "__main__":
         sys.exit(1);
         
     if len(sys.argv) > 2:
-        cmd = sys.argv[2];
+        cmd[0] = sys.argv[2];
 
     with open(config_file, 'r') as f:
          try:
@@ -153,5 +168,22 @@ if __name__ == "__main__":
         sys.exit(1);
 
     else:
-        print("Executing xAPP ....");
-        p = subprocess.check_call(cmd);
+
+        # Register signal handlers
+        signal.signal(signal.SIGINT, signal_handler);
+        signal.signal(signal.SIGTERM, signal_handler);
+
+        # Start the xAPP
+        #print("Executing xAPP ....");
+        xapp_subprocess = subprocess.Popen(cmd, shell = False, stdin=None, stdout=None, stderr = None);
+        xapp_pid = xapp_subprocess.pid;
+
+        # Periodically poll the process every 5 seconds to check if still alive
+        while(1):
+            xapp_status = xapp_subprocess.poll();
+            if xapp_status == None:
+                time.sleep(5);
+            else:
+                print("XaPP terminated via signal {0}\n".format(-1 * xapp_status));
+                break;
+                

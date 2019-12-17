@@ -62,8 +62,6 @@ bool message_processor::operator()(rmr_mbuf_t *message){
   _num_messages ++;
   std::string response;
 
-  //FILE *pfile;
-  //std::string filename = "/opt/out/e2ap_" + std::to_string(_num_messages) + ".per";
 
   state = NO_ERROR;
   mdclog_write(MDCLOG_DEBUG, "Received RMR message of type %d and size %d\n", message->mtype, message->len);
@@ -75,10 +73,7 @@ bool message_processor::operator()(rmr_mbuf_t *message){
     return false;
   }
   
-  // start measurement 
-  auto start = std::chrono::high_resolution_clock::now();
-  
-  // main message processing code
+  // routing based on message type 
   switch(message->mtype){
     
   case RIC_INDICATION:
@@ -89,10 +84,6 @@ bool message_processor::operator()(rmr_mbuf_t *message){
       break;
     }
     
-    //pfile = fopen(filename.c_str(), "wb");
-    //fwrite(message->payload, sizeof(char), message->len, pfile);
-    //fclose(pfile);
-
     e2ap_recv_pdu = 0;
     e2sm_header = 0;
     
@@ -108,9 +99,11 @@ bool message_processor::operator()(rmr_mbuf_t *message){
 	mdclog_write(MDCLOG_ERR, "Error :: %s, %d :: Could not get fields from RICindication message\n", __FILE__, __LINE__);
 	goto finished;
       }
+
       //std::cout <<"+++++++++++++++++++++++ E2AP Indication ++++++++++++++++++++++++" << std::endl;
       //xer_fprint(stdout, &asn_DEF_E2N_E2AP_PDU, e2ap_recv_pdu);
       //std::cout <<"+++++++++++++++++++++++ E2AP Indication ++++++++++++++++++++++++" << std::endl;
+
     }
     else{
       num_err_indications ++;
@@ -158,7 +151,7 @@ bool message_processor::operator()(rmr_mbuf_t *message){
     
 
     // NOTE : We assume RICindicationMessage contains payload (not E2SM message)
-    // Send payload to plugin
+    // Send payload to protector plugin
     current_index = 0;
     remaining_buffer = _buffer_size;
     mdclog_write(MDCLOG_DEBUG, "Processing E2AP Indication message of size %lu\n", indication_data.indication_msg_size);
@@ -220,7 +213,9 @@ bool message_processor::operator()(rmr_mbuf_t *message){
     control_data.req_id = indication_data.req_id;
     control_data.req_seq_no = indication_data.req_seq_no;
     control_data.func_id = indication_data.func_id;
-    control_data.control_ack = 2; // no ack required       
+    control_data.control_ack = 1; // no ack required
+    control_data.call_process_id = indication_data.call_process_id;
+    control_data.call_process_id_size = indication_data.call_process_id_size;
     res = control_request_processor.encode_e2ap_control_request(message->payload, &mlen, control_data);
     
     if(likely(res)){

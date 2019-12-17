@@ -37,7 +37,7 @@
 #include <E2N_ProtocolIE-Field.h>
 #include <e2ap_control_helper.hpp>
 
-#define NUM_CONTROL_REQUEST_IES 5
+#define NUM_CONTROL_REQUEST_IES 6
   
   
 class ric_control_request{

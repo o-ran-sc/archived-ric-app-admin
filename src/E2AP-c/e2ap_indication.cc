@@ -199,6 +199,20 @@ bool ric_indication::set_fields(E2N_InitiatingMessage_t *initMsg, ric_indication
   ricmsg_ie->size = dinput.indication_msg_size;
   ASN_SEQUENCE_ADD(&(ric_indication->protocolIEs), &(IE_array[ie_index]));
 
+
+  // optional call process id ..
+  if (dinput.call_process_id_size > 0){
+    ie_index = 7;
+    E2N_RICindication_IEs_t *ies_ind_callprocessid = &IE_array[ie_index];
+    ies_ind_callprocessid->criticality = E2N_Criticality_reject;
+    ies_ind_callprocessid->id = E2N_ProtocolIE_ID_id_RICcallProcessID;
+    ies_ind_callprocessid->value.present = E2N_RICindication_IEs__value_PR_RICcallProcessID;
+    E2N_RICcallProcessID_t *riccallprocessid_ie = &ies_ind_callprocessid->value.choice.RICcallProcessID;
+    riccallprocessid_ie->buf = dinput.indication_msg;
+    riccallprocessid_ie->size = dinput.indication_msg_size;
+    ASN_SEQUENCE_ADD(&(ric_indication->protocolIEs), &(IE_array[ie_index]));
+  }
+  
   return true;
 
 };
@@ -249,6 +263,10 @@ bool ric_indication:: get_fields(E2N_InitiatingMessage_t * init_msg,  ric_indica
       case (E2N_ProtocolIE_ID_id_RICactionID):
   	dout.action_id = memb_ptr->value.choice.RICactionID;
   	break;
+
+      case (E2N_ProtocolIE_ID_id_RICcallProcessID):
+	dout.call_process_id = memb_ptr->value.choice.RICcallProcessID.buf;
+	dout.call_process_id_size = memb_ptr->value.choice.RICcallProcessID.size;
 	
       default:
   	break;

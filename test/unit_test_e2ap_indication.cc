@@ -45,6 +45,7 @@ TEST_CASE("E2AP Indication", "Encoding/Decoding"){
 
   unsigned char buf_header[BUFFER_SIZE];
   unsigned char buf_msg[BUFFER_SIZE];
+  unsigned char buf_callproc[BUFFER_SIZE];
   ric_indication test_check;
   
   SECTION("Incorrect E2AP Indication PDU"){
@@ -71,13 +72,16 @@ TEST_CASE("E2AP Indication", "Encoding/Decoding"){
 
     strcpy((char *)buf_header, "X2AP Header");
     strcpy((char *)buf_msg, "X2AP_Message");
+    strcpy((char *)buf_callproc, "Call Process ID=10");
     
     dinput.indication_header = buf_header;
     dinput.indication_header_size = strlen((const char *)buf_header);
   
     dinput.indication_msg = buf_msg;
     dinput.indication_msg_size = strlen((const char *)buf_msg);
-    
+
+    dinput.call_process_id = buf_callproc;
+    dinput.call_process_id_size = strlen((const char *)buf_callproc);
     
     /* encoding */
     size_t data_size = 512;
@@ -154,6 +158,14 @@ TEST_CASE("E2AP Indication", "Encoding/Decoding"){
 
     std::string din_string((const char *)dinput.indication_header, dinput.indication_header_size);
     std::string dout_string((const char*)dout.indication_header, dout.indication_header_size);
+    REQUIRE(din_string == dout_string);
+
+    din_string.assign((const char *)dinput.indication_msg, dinput.indication_msg_size);
+    dout_string.assign((const char*)dout.indication_msg, dout.indication_msg_size);
+    REQUIRE(din_string == dout_string);
+
+    din_string.assign((const char *)dinput.call_process_id, dinput.call_process_id_size);
+    dout_string.assign((const char*)dout.call_process_id, dout.call_process_id_size);
     REQUIRE(din_string == dout_string);
 
     res = indication_pdu.get_fields(NULL, dout);

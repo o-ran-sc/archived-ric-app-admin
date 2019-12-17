@@ -46,6 +46,7 @@ TEST_CASE("E2AP Control Request", "Encoding/Decoding"){
 
   unsigned char buf_header[BUFFER_SIZE];
   unsigned char buf_msg[BUFFER_SIZE];
+  unsigned char buf_callproc[BUFFER_SIZE];
   
   SECTION("Verify E2AP Control Encoding/Decoding Successful"){
     
@@ -56,16 +57,17 @@ TEST_CASE("E2AP Control Request", "Encoding/Decoding"){
   
     strcpy((char *)buf_header, "hello world");
     strcpy((char *)buf_msg, "something out there");
-    unsigned char buf_proc_id[4] = "25";
-  
+    strcpy((char *)buf_callproc, "Call Process ID = 20");
+    
     dinput.control_header = buf_header;
     dinput.control_header_size = strlen((const char *)buf_header);
     
     dinput.control_msg = buf_msg;
     dinput.control_msg_size = strlen((const char *)buf_msg);
     
-    dinput.call_process_id = buf_proc_id;
-    dinput.call_process_id_size = strlen((const char *)buf_proc_id);
+    dinput.call_process_id = buf_callproc;
+    dinput.call_process_id_size = strlen((const char *)buf_callproc);
+    
     
     /* encoding */
     size_t data_size = 4096;
@@ -76,6 +78,9 @@ TEST_CASE("E2AP Control Request", "Encoding/Decoding"){
 
     E2N_E2AP_PDU_t * e2ap_recv = 0;
     asn_dec_rval_t dec_res  = asn_decode(0,ATS_ALIGNED_BASIC_PER, &asn_DEF_E2N_E2AP_PDU, (void**)&(e2ap_recv), data, data_size);
+    if(dec_res.code != RC_OK)
+      std::cerr <<"Error = " << strerror(errno) << std::endl;
+
     REQUIRE(dec_res.code == RC_OK);
     
     res = control_request_pdu.get_fields(e2ap_recv->choice.initiatingMessage, dout);
@@ -92,6 +97,16 @@ TEST_CASE("E2AP Control Request", "Encoding/Decoding"){
     din_string.assign((char *)dinput.control_header, dout.control_header_size);
     dout_string.assign((char *)dout.control_header, dout.control_header_size);
     REQUIRE(din_string == dout_string);
+
+    din_string.assign((char *)dinput.control_msg, dout.control_msg_size);
+    dout_string.assign((char *)dout.control_msg, dout.control_msg_size);
+    REQUIRE(din_string == dout_string);
+
+    din_string.assign((char *)dinput.call_process_id, dout.call_process_id_size);
+    dout_string.assign((char *)dout.call_process_id, dout.call_process_id_size);
+    REQUIRE(din_string == dout_string);
+
+    
    
     ASN_STRUCT_FREE(asn_DEF_E2N_E2AP_PDU, e2ap_recv); 
     
