@@ -25,11 +25,11 @@
 
 #include <e2ap_indication.hpp>
 
-// Set up the initiating message and also allocate protocolIEs in container
-// Note : this bypasses requirement to use ASN_SEQUENCE_ADD. We can directly
-// assign pointers to the array in ProtocolIE. However, this also leaves us on the
-// hook to manually clear the memory
-
+// Set up memory allocations for each IE for encoding
+// We are responsible for memory management for each IE for encoding
+// Hence destructor should clear out memory
+// When decoding, we rely on asn1c macro (ASN_STRUCT_FREE to be called
+// for releasing memory by external calling function)
 ric_indication::ric_indication(void){
 
   e2ap_pdu_obj = 0;

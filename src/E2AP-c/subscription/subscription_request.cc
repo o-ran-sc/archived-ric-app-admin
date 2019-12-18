@@ -20,7 +20,13 @@
 
 
 #include "subscription_request.hpp"
-  
+
+
+// Set up memory allocations for each IE for encoding
+// We are responsible for memory management for each IE for encoding
+// Hence destructor should clear out memory
+// When decoding, we rely on asn1c macro (ASN_STRUCT_FREE to be called
+// for releasing memory by external calling function)
 subscription_request::subscription_request(void){
 
   _name = "default";

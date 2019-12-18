@@ -25,11 +25,11 @@
 
 #include <e2ap_control.hpp>
 
-// Set up the initiating message and also allocate protocolIEs in container
-// Note : this bypasses requirement to use ASN_SEQUENCE_ADD. We can directly
-// assign pointers to the array in ProtocolIE. However, this also leaves us on the
-// hook to manually clear the memory
-
+// Set up memory allocations for each IE for encoding
+// We are responsible for memory management for each IE for encoding
+// Hence destructor should clear out memory
+// When decoding, we rely on asn1c macro (ASN_STRUCT_FREE to be called
+// for releasing memory by external calling function)
 ric_control_request::ric_control_request(void){
 
   e2ap_pdu_obj = 0;
@@ -128,13 +128,13 @@ bool ric_control_request::set_fields(E2N_InitiatingMessage_t *initMsg, ric_contr
   }
 
   E2N_RICcontrolRequest_t * ric_control_request = &(initMsg->value.choice.RICcontrolRequest);
-  ric_control_request->protocolIEs.list.count = 0;
+  ric_control_request->protocolIEs.list.count = 0; // reset 
   
   // for(i = 0; i < NUM_CONTROL_REQUEST_IES;i++){
   //   memset(&(IE_array[i]), 0, sizeof(RICcontrolRequest_IEs_t));
   // }
  
- 
+  // Mandatory IE
   ie_index = 0;
   E2N_RICcontrolRequest_IEs_t *ies_ricreq = &IE_array[ie_index];  
   ies_ricreq->criticality = E2N_Criticality_reject;
@@ -145,6 +145,7 @@ bool ric_control_request::set_fields(E2N_InitiatingMessage_t *initMsg, ric_contr
   ricrequest_ie->ricRequestSequenceNumber = dinput.req_seq_no;
   ASN_SEQUENCE_ADD(&(ric_control_request->protocolIEs), &(IE_array[ie_index]));
 
+  // Mandatory IE
   ie_index = 1;
   E2N_RICcontrolRequest_IEs_t *ies_ranfunc = &IE_array[ie_index];
   ies_ranfunc->criticality = E2N_Criticality_reject;
@@ -155,15 +156,7 @@ bool ric_control_request::set_fields(E2N_InitiatingMessage_t *initMsg, ric_contr
   ASN_SEQUENCE_ADD(&(ric_control_request->protocolIEs), &(IE_array[ie_index]));
 
 
-  // ie_index = 2;
-  // RICcontrolRequest_IEs_t *ies_riccallprocessid = &IE_array[ie_index];
-  // ies_riccallprocessid->criticality = E2N_Criticality_reject;
-  // ies_riccallprocessid->id = E2N_ProtocolIE_ID_id_RICcallProcessID;
-  // ies_riccallprocessid->value.present = E2N_RICcontrolRequest_IEs__value_PR_RICcallProcessID;
-  // RICcallProcessID_t *riccallprocessid_ie = &ies_riccallprocessid->value.choice.RICcallProcessID;
-  // riccallprocessid_ie->buf = dinput.call_process_id;
-  // riccallprocessid_ie->size = dinput.call_process_id_size;
-
+  // Mandatory IE
   ie_index = 2;
   E2N_RICcontrolRequest_IEs_t *ies_richead = &IE_array[ie_index];
   ies_richead->criticality = E2N_Criticality_reject;
@@ -173,7 +166,8 @@ bool ric_control_request::set_fields(E2N_InitiatingMessage_t *initMsg, ric_contr
   richeader_ie->buf = dinput.control_header;
   richeader_ie->size = dinput.control_header_size;
   ASN_SEQUENCE_ADD(&(ric_control_request->protocolIEs), &(IE_array[ie_index]));
-  
+
+  // Mandatory IE
   ie_index = 3;
   E2N_RICcontrolRequest_IEs_t *ies_indmsg = &IE_array[ie_index];
   ies_indmsg->criticality = E2N_Criticality_reject;
@@ -184,15 +178,19 @@ bool ric_control_request::set_fields(E2N_InitiatingMessage_t *initMsg, ric_contr
   ricmsg_ie->size = dinput.control_msg_size;
   ASN_SEQUENCE_ADD(&(ric_control_request->protocolIEs), &(IE_array[ie_index]));
 
+  // Optional IE
   ie_index = 4;
-  E2N_RICcontrolRequest_IEs_t *ies_indtyp = &IE_array[ie_index];
-  ies_indtyp->criticality = E2N_Criticality_reject;
-  ies_indtyp->id = E2N_ProtocolIE_ID_id_RICcontrolAckRequest;
-  ies_indtyp->value.present = E2N_RICcontrolRequest_IEs__value_PR_RICcontrolAckRequest;
-  E2N_RICcontrolAckRequest_t *ricackreq_ie = &ies_indtyp->value.choice.RICcontrolAckRequest;
-  *ricackreq_ie = dinput.control_ack;
-  ASN_SEQUENCE_ADD(&(ric_control_request->protocolIEs), &(IE_array[ie_index]));
+  if (dinput.control_ack >= 0){
+    E2N_RICcontrolRequest_IEs_t *ies_indtyp = &IE_array[ie_index];
+    ies_indtyp->criticality = E2N_Criticality_reject;
+    ies_indtyp->id = E2N_ProtocolIE_ID_id_RICcontrolAckRequest;
+    ies_indtyp->value.present = E2N_RICcontrolRequest_IEs__value_PR_RICcontrolAckRequest;
+    E2N_RICcontrolAckRequest_t *ricackreq_ie = &ies_indtyp->value.choice.RICcontrolAckRequest;
+    *ricackreq_ie = dinput.control_ack;
+    ASN_SEQUENCE_ADD(&(ric_control_request->protocolIEs), &(IE_array[ie_index]));
+  }
 
+  // Optional IE
   ie_index = 5;
   if(dinput.call_process_id_size > 0){
     E2N_RICcontrolRequest_IEs_t *ies_callprocid = &IE_array[ie_index];

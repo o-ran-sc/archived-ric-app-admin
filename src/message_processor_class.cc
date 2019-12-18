@@ -213,7 +213,7 @@ bool message_processor::operator()(rmr_mbuf_t *message){
     control_data.req_id = indication_data.req_id;
     control_data.req_seq_no = indication_data.req_seq_no;
     control_data.func_id = indication_data.func_id;
-    control_data.control_ack = 1; // no ack required
+    //control_data.control_ack = 0; // no ack required
     control_data.call_process_id = indication_data.call_process_id;
     control_data.call_process_id_size = indication_data.call_process_id_size;
     res = control_request_processor.encode_e2ap_control_request(message->payload, &mlen, control_data);
