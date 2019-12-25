@@ -61,11 +61,16 @@ bool rcv_message(rmr_mbuf_t *message){
 
 
 void usage(char *command){
-    std::cout <<"Usage : " << command << " ";
-    std::cout <<" --name[-n] xapp_instance_name ";
-    std::cout <<" --port[-p] port to listen on (default is tcp:4561) ";
-    std::cout <<"--schema[-s] schema file";
-    
+    std::cout <<"Usage : " << command << " " << std::endl;
+    std::cout <<" --name[-n] xapp_instance_name " << std::endl;
+    std::cout <<" --port[-p] port to listen on (default is tcp:4561) " << std::endl;
+    std::cout << " --op[-o] operation mode from {0, 1, 2} : 0 is CREATE, 1 is UPDATE, 2 is DELETE" << std::endl;
+    std::cout << " --window [-w] window size in seconds (default is 60 seconds)" << std::endl;
+    std::cout << " --blockrate [-b] blocking rate percentage (default is 90%)" << std::endl;
+    std::cout << " --trigger[-t] trigger threshold (default is 40 requests in window)" << std::endl;
+    std::cout << " --enforce  set policy to enforce if flag prvoided (default is 0 i.e not enforce)" << std::endl;
+    std::cout << " --class [-c] subscriber profile id to which policy must be applied (default is 5)" << std::endl;
+    std::cout << " --instance[-i]  policy instance id (default is ac-xapp-1)" << std::endl;
     std::cout << std::endl;
 }
 
