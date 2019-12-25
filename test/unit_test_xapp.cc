@@ -1,4 +1,6 @@
 /*
+    // basically just set size to be larger than allowed even if actual 
+    // message is small
 ==================================================================================
 
         Copyright (c) 2018-2019 AT&T Intellectual Property.
@@ -59,12 +61,6 @@ bool echo_into_space_pkts(rmr_mbuf_t *rcv_msg){
 void dropped_pkts(rmr_mbuf_t *send_msg){
   std::cout <<"Error handler triggered " << std::endl;
   num_dropped_pkts++;
-}
-
-bool pong_a1(rmr_mbuf_t *rcv_msg){
-  rcv_msg->mtype = A1_POLICY_RESP; 
-  num_ping_pkts++;
-  return true;
 }
 
 
@@ -268,38 +264,8 @@ TEST_CASE("Test xapp functionality", "[xapp]"){
       REQUIRE(num_pong_pkts == NumPkts);
 
 
-      // Re-run experiment but now with A1 message type when
-      // ping responds
-      pong_xapp.StartThread(pong_a1);
-      sleep(1);
-
-      failed_tx = 0;
-      num_ping_pkts = 0;
-      num_pong_pkts = 0;
-
-      
-      for(i = 0; i < NumPkts; i++){
-    	clock_gettime(CLOCK_REALTIME, &(my_message.ts));
-    	snprintf(my_message.payload, MESSAGE_SIZE, "hello world %d", i);
-    	bool res = ping_xapp.Send(101, sizeof(Test_message), (void *) (&my_message));
-    	if (!res){
-    	  failed_tx ++;
-    	}
-      }
-
-      sleep(1);
       ping_xapp.Stop();
-      pong_xapp.Stop();
 
-      std::cerr <<"Pong received ping pkts = " << num_ping_pkts << " Ping received a1 packets = " << num_pong_pkts << " failures = " << failed_tx << std::endl;
-      
-      REQUIRE(num_ping_pkts >=  NumPkts);
-      REQUIRE(num_pong_pkts >=  NumPkts);
-      REQUIRE(failed_tx == 0);
-
-
-      
-     
     }
 }
 
@@ -329,10 +295,12 @@ TEST_CASE(" Test out various  transmission methods ..", "1"){
     sleep(1);
     
     // Test sending a message of size larger than allowed
+    // basically just set size to be larger than allowed even if actual 
+    // message is small
     res = test_xapp.Send(102, RMR_BUFFER_SIZE + 100, (void *)(&my_message));
     REQUIRE(res == false);
 
-    res = test_xapp.Send(102, RMR_BUFFER_SIZE + 100, (void *)(&my_message), "id");
+    res = test_xapp.Send(102, RMR_BUFFER_SIZE + 100, (void *)(&my_message), my_meid);
     REQUIRE(res == false);
     test_xapp.Stop();
   

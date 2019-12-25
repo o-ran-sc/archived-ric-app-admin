@@ -126,12 +126,12 @@ directory contains mock-ups for these three components which can be build and ex
 
 2.  **A1 Mediator** : The A1 mediator is responsible for sending policies to the xAPPs over RMR to configure their behaviour. A mock-up of the A1 mediator can be built and executed as follows :
     
-    - *make mock-a1-server* builds the executable.
-    - The executable can be run as *./mock-a1-server -p <port number>*  where port number can be any port not conflicting with the xAPP and E2 Term.
-    - Note that the A1 mediator also uses RMR and hence the environment variable *RMR_SEED_RT* must also be set when executing *mock-a1-server* (if static routes are being used).
-    - On start up, the *mock-a1-mediator* will send a stream of valid/invalid JSON messages containing policies to test the xAPP.
+    - *make mock-a1-tool* builds the executable.
+    - The executable can be run as *./mock-a1-tool -p <port number> <options>*  where port number can be any port not conflicitng  with the xAPP and E2 Term ports.
+    - Note that the A1 mediator also uses RMR and hence the environment variable *RMR_SEED_RT* must also be set when executing *mock-a1-tool* (if static routes are being used).
+    - Run ./mock-a1-tool -h to see various options.
         
-3.  **VES Collector** : This component is responsible for receiving metrics from xAPPs as JSON payloads. A simple mock-up is available under *test/* which is basically a *cherrypy* web-server that receives JSON and prints out relevant messages. It can be invoked as *python ./mock_ves_collector.py*.
+3.  **VES Collector** : This component is responsible for receiving metrics from xAPPs as JSON payloads. A simple mock-up is available under *test/* which is basically a *cherrypy* web-server that receives VES messages from the Admission Control Xapp  and prints out relevant messages. It can be invoked as *python ./mock_ves_collector.py*.
 
     - Pre-requisites for the VES collector are the *cherrypy* and *requests* Python modules. They can be installed via pip :  *pip install cherrypy requests*.
       
